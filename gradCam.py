@@ -1,5 +1,5 @@
 import tensorflow as tf
-import numpy as np
+
 def gradCam(y,A):
     """
     y,A according to paper
@@ -14,18 +14,26 @@ def gradCam(y,A):
     relu = tf.nn.relu(reduced)
     # x / (K.sqrt(K.mean(K.square(x))) + 1e-5)
     # gradCamRes = gradCamRes/ tf.sqrt(tf.mean(tf.square(gradCamRes))+1e-5)
-    normalized = tf.nn.l2_normalize(relu)
+    # normalized = tf.nn.l2_normalize(relu)
     # normalized = relu/tf.sqrt(tf.reduce_mean(tf.square(relu)+1e-5))
+    normalized = relu/(tf.reduce_max(relu)+1e-12)
     # tf.square
     return normalized
+
+def gradCamToHeatMap(cam,im):
+    heatShape = im.shape[:2]
+    heatmap = cv2.resize(cam[0],heatShape)
+    colored = 0.3*im+0.7*cv2.applyColorMap(np.uint8(255*heatmap), cv2.COLORMAP_JET)
+    return heatmap, colored
 
 if __name__ == "__main__":
     import cv2
     from networks import getNetwork
     import matplotlib.pyplot as plt
+    import numpy as np
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
-    nn,ph = getNetwork(name="ResNet50")
+    nn,ph = getNetwork(name="VGG16")
     nn.summary()
     preSoftMax = nn.output.op.inputs[0]
     lastConv = nn.layers[-6 ]
@@ -34,9 +42,8 @@ if __name__ == "__main__":
     gradCamT = gradCam(preSoftMax,A)
     im = cv2.imread('sample_images/ManCoffee.jpeg')
     im = cv2.imread('sample_images/cat_dog.png')
-
     im = cv2.resize(im,(224,224))
     res = sess.run(gradCamT,{ph:[im]})
-    heatmap = cv2.resize(res[0],(224,224))
-    cam = cv2.applyColorMap(np.uint8(255*heatmap), cv2.COLORMAP_JET)
-    cv2.imwrite("gradcam.jpg",cam)
+    heatmap,colored = gradCamToHeatMap(res,im)
+
+    cv2.imwrite("gradcam.jpg",colored)
