@@ -61,6 +61,7 @@ class StreamReader:
         print("Exiting capture")
         print(exec_type, exc_value, traceback)
         return True
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('stream', metavar="image", default='http://192.168.16.101:8080/video',

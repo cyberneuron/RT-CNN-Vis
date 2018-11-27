@@ -9,6 +9,7 @@ import time
 import math
 import matplotlib.pyplot as plt
 from deconv import unknownVis, createGrad
+from gradCam import gradCam
 
 def resizeFrame(frame,w=224,h=224):
     return cv2.resize(frame, (w,h))
@@ -72,11 +73,15 @@ unknownVisNodes = unknownVis(graph,convGrids,ph)
 # kern =graph.get_operation_by_name('block1_conv1/kernel')
 # kern.outputs
 # conv
+convOutputs
+softmaxin = vgg.output.op.inputs[0]
+# dir(outLayer)
+softmaxin
+vgg.output
+pass
 
-
-
-writer = tf.summary.FileWriter("outputgraph", sess.graph)
-writer.close()
+# writer = tf.summary.FileWriter("outputgraph", sess.graph)
+# writer.close()
 # unknownVisNodes = {}
 # convGrids
 # {'block1_conv1/Conv2D': <tf.Tensor 'concat_9:0' shape=(1792, 1792) dtype=float32>,
@@ -120,6 +125,9 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread
 import sys
 
+gradCamA = convOutputs[-2][0]
+gradCamOutT = gradCam(softmaxin,gradCamA)
+
 
 
 async def main(ui=None,cb=defaultCb, options={}):
@@ -143,12 +151,19 @@ async def main(ui=None,cb=defaultCb, options={}):
                 aGrid, certainMap = sess.run([gridTensor,mapStack[raw_idx]],feed_dict={ph:frame})
             else:
                 gradList = unknownVisNodes[currentGridName]
-                if gradList[raw_idx] is None:
-                    gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
+                # if gradList[raw_idx] is None:
+                #     gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
                 # print("grad operation",gradList[raw_idx])
-                aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
-                reconst = reconst[0][0]
-                cv2.imshow("unknownVis",reconst)
+                # aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
+
+                aGrid, certainMap,gradCamOut = sess.run([gridTensor,mapStack[raw_idx],gradCamOutT],feed_dict={ph:frame})
+
+                # reconst = reconst[0][0]
+                # cv2.imshow("unknownVis",reconst)
+
+                cv2.imshow("gradCam",cv2.resize(gradCamOut*10000,(224,224)))
+                # cv2.imshow("gradCam",gradCamOut)
+
             # print(f"aGrid {aGrid.shape}{(columns,rows)}")
 
             # aGrid = cv2.resize(aGrid, (500,500))
@@ -185,7 +200,11 @@ exit()
 # Below is junk
 
 
-im = cv2.imread("sample_images/images.jpg")
+im = cv2.imread("sample_images/ManCoffee.jpeg")
+im = cv2.resize(im, (224,224))
+gr = sess.run(gradCamOutT,{ph: [im] })
+plt.plot(gr)
+gr
 im6 = np.concatenate([im,im],axis=-1)
 im6e = np.expand_dims(im6,axis=0)
 im6e.shape
