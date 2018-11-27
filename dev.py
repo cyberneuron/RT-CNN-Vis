@@ -10,7 +10,7 @@ import math
 import matplotlib.pyplot as plt
 from deconv import unknownVis, createGrad
 from gradCam import gradCam
-
+from networks import getNetwork
 def resizeFrame(frame,w=224,h=224):
     return cv2.resize(frame, (w,h))
     cutw = int((frame.shape[1]-w)/2)
@@ -26,18 +26,7 @@ def getLayersOutputs(type='Conv2D'):
     # return [i.type for i in graph.get_operations()]
 
 
-def getNetwork(ph):
-    nn = tf.keras.applications.ResNet50
-    # nn = tf.keras.applications.VGG16
-    nn = nn(
-        include_top=True,
-        weights='imagenet',
-        input_tensor=ph,
-        input_shape=None,
-        pooling=None,
-        classes=1000
-        )
-    return nn
+
 
 def constructGridNode(output):
     layer = output
@@ -62,8 +51,8 @@ def constructGridNode(output):
 
 sess = tf.Session()
 tf.keras.backend.set_session(sess)
-ph = tf.placeholder(tf.float32, shape=(None,224, 224,3),name="cnnInput")
-vgg = getNetwork(ph)
+
+nn, ph = getNetwork(ph)
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
 convGrids = {name: constructGridNode(output[0]) for (output,name) in convOutputs}
@@ -74,10 +63,10 @@ unknownVisNodes = unknownVis(graph,convGrids,ph)
 # kern.outputs
 # conv
 convOutputs
-softmaxin = vgg.output.op.inputs[0]
+softmaxin = nn.output.op.inputs[0]
 # dir(outLayer)
 softmaxin
-vgg.output
+
 pass
 
 # writer = tf.summary.FileWriter("outputgraph", sess.graph)
