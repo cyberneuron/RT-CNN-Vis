@@ -20,9 +20,6 @@ def getLayersOutputs(type='Conv2D'):
     return [(i.outputs[0],i.name) for i in graph.get_operations() if i.type.lower() == type.lower()]
     # return [i.type for i in graph.get_operations()]
 
-
-
-
 def constructGridNode(output):
     layer = output
     numMaps = int(layer.shape[-1])
@@ -43,11 +40,12 @@ def constructGridNode(output):
     return result,(numColumns,numRows), mapStack
     # reshaped = tf.reshape(concated,(len*numColumns,width*numRows))
     # return reshaped
+
 graph = tf.get_default_graph()
 sess = tf.Session()
 tf.keras.backend.set_session(sess)
 
-nn, ph = getNetwork()
+nn, ph = getNetwork("VGG16")
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
 convGrids = {name: constructGridNode(output[0]) for (output,name) in convOutputs}
@@ -60,33 +58,7 @@ camT = gradCam(softmaxin,gradCamA)
 
 
 
-# writer = tf.summary.FileWriter("outputgraph", sess.graph)
-# writer.close()
-# unknownVisNodes = {}
-# convGrids
-# {'block1_conv1/Conv2D': <tf.Tensor 'concat_9:0' shape=(1792, 1792) dtype=float32>,
-#  'block1_conv2/Conv2D': <tf.Tensor 'concat_19:0' shape=(1792, 1792) dtype=float32>,
-#  'block2_conv1/Conv2D': <tf.Tensor 'concat_33:0' shape=(1232, 1344) dtype=float32>,
-#  'block2_conv2/Conv2D': <tf.Tensor 'concat_47:0' shape=(1232, 1344) dtype=float32>,
-#  'block3_conv1/Conv2D': <tf.Tensor 'concat_65:0' shape=(896, 896) dtype=float32>,
-#  'block3_conv2/Conv2D': <tf.Tensor 'concat_83:0' shape=(896, 896) dtype=float32>,
-#  'block3_conv3/Conv2D': <tf.Tensor 'concat_101:0' shape=(896, 896) dtype=float32>,
-#  'block4_conv1/Conv2D': <tf.Tensor 'concat_126:0' shape=(644, 644) dtype=float32>,
-#  'block4_conv2/Conv2D': <tf.Tensor 'concat_151:0' shape=(644, 644) dtype=float32>,
-#  'block4_conv3/Conv2D': <tf.Tensor 'concat_176:0' shape=(644, 644) dtype=float32>,
-#  'block5_conv1/Conv2D': <tf.Tensor 'concat_201:0' shape=(322, 322) dtype=float32>,
-#  'block5_conv2/Conv2D': <tf.Tensor 'concat_226:0' shape=(322, 322) dtype=float32>,
-#  'block5_conv3/Conv2D': <tf.Tensor 'concat_251:0' shape=(322, 322) dtype=float32>}
-
-
-
-def defaultCb(frame):
-    # print("showing frame {}".format(fram))
-    cv2.imshow('frame',frame)
-
-
-
-async def main(ui=None,cb=defaultCb, options={}):
+async def main(ui=None, options={}):
     assert ui
     ui.setButtons(convGrids.keys())
 
@@ -104,7 +76,7 @@ async def main(ui=None,cb=defaultCb, options={}):
 
             aGrid, certainMap,cam = sess.run([gridTensor,mapStack[raw_idx],camT],feed_dict={ph:frame})
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
-            cv2.imshow("gradCam",coloredMap)
+            cv2.imshow("gradCam",heatmap)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -139,6 +111,23 @@ if __name__ == '__main__':
 
 
 exit()
+# writer = tf.summary.FileWriter("outputgraph", sess.graph)
+# writer.close()
+# unknownVisNodes = {}
+# convGrids
+# {'block1_conv1/Conv2D': <tf.Tensor 'concat_9:0' shape=(1792, 1792) dtype=float32>,
+#  'block1_conv2/Conv2D': <tf.Tensor 'concat_19:0' shape=(1792, 1792) dtype=float32>,
+#  'block2_conv1/Conv2D': <tf.Tensor 'concat_33:0' shape=(1232, 1344) dtype=float32>,
+#  'block2_conv2/Conv2D': <tf.Tensor 'concat_47:0' shape=(1232, 1344) dtype=float32>,
+#  'block3_conv1/Conv2D': <tf.Tensor 'concat_65:0' shape=(896, 896) dtype=float32>,
+#  'block3_conv2/Conv2D': <tf.Tensor 'concat_83:0' shape=(896, 896) dtype=float32>,
+#  'block3_conv3/Conv2D': <tf.Tensor 'concat_101:0' shape=(896, 896) dtype=float32>,
+#  'block4_conv1/Conv2D': <tf.Tensor 'concat_126:0' shape=(644, 644) dtype=float32>,
+#  'block4_conv2/Conv2D': <tf.Tensor 'concat_151:0' shape=(644, 644) dtype=float32>,
+#  'block4_conv3/Conv2D': <tf.Tensor 'concat_176:0' shape=(644, 644) dtype=float32>,
+#  'block5_conv1/Conv2D': <tf.Tensor 'concat_201:0' shape=(322, 322) dtype=float32>,
+#  'block5_conv2/Conv2D': <tf.Tensor 'concat_226:0' shape=(322, 322) dtype=float32>,
+#  'block5_conv3/Conv2D': <tf.Tensor 'concat_251:0' shape=(322, 322) dtype=float32>}
 
 def junkish():
             gradList = unknownVisNodes[currentGridName]
