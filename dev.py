@@ -9,13 +9,8 @@ import time
 import math
 import matplotlib.pyplot as plt
 from deconv import unknownVis, createGrad
-from gradCam import gradCam
+from gradCam import gradCam, gradCamToHeatMap
 from networks import getNetwork
-def resizeFrame(frame,w=224,h=224):
-    return cv2.resize(frame, (w,h))
-    cutw = int((frame.shape[1]-w)/2)
-    cuth = int((frame.shape[0]-w)/2)
-    return frame[cuth:cuth+h,cutw:cutw+w,:]
 
 graph = tf.get_default_graph()
 def getLayers(type='Conv2D'):
@@ -52,22 +47,18 @@ def constructGridNode(output):
 sess = tf.Session()
 tf.keras.backend.set_session(sess)
 
-nn, ph = getNetwork(ph)
+nn, ph = getNetwork()
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
 convGrids = {name: constructGridNode(output[0]) for (output,name) in convOutputs}
 unknownVisNodes = unknownVis(graph,convGrids,ph)
-# conv = getLayers()[0]
-# graph.get_operations()
-# kern =graph.get_operation_by_name('block1_conv1/kernel')
-# kern.outputs
-# conv
-convOutputs
-softmaxin = nn.output.op.inputs[0]
-# dir(outLayer)
-softmaxin
 
-pass
+
+gradCamA = nn.layers[-6 ].output
+softmaxin = nn.output.op.inputs[0]
+camT = gradCam(softmaxin,gradCamA)
+
+
 
 # writer = tf.summary.FileWriter("outputgraph", sess.graph)
 # writer.close()
@@ -114,8 +105,30 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread
 import sys
 
-gradCamA = convOutputs[-2][0]
-gradCamOutT = gradCam(softmaxin,gradCamA)
+def junkish():
+            gradList = unknownVisNodes[currentGridName]
+            # if gradList[raw_idx] is None:
+            #     gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
+            # print("grad operation",gradList[raw_idx])
+            # aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
+
+            aGrid, certainMap,gradCamOut = sess.run([gridTensor,mapStack[raw_idx],gradCamOutT],feed_dict={ph:frame})
+
+            # reconst = reconst[0][0]
+            # cv2.imshow("unknownVis",reconst)
+            heatmap, coloredMap = gradCamToHeatMap(gradCamOut,frameToShow)
+            cv2.imshow("gradCam",coloredMap)
+                # cv2.imshow("gradCam",gradCamOut)
+
+            # print(f"aGrid {aGrid.shape}{(columns,rows)}")
+
+            # aGrid = cv2.resize(aGrid, (500,500))
+            # defaultCb(aGrid)
+
+            # vggOut = sess.run(vgg.output,feed_dict={imPh:frame})
+            # print("{} nn argmax: {} {}".format(time.time(), np.argmax(vggOut,axis=1),preds))
+            # if args.show:
+            #     # cv2.putText(frame,"Persons: {}".format("3"),(40,40), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1,cv2.LINE_AA)
 
 
 
@@ -130,39 +143,14 @@ async def main(ui=None,cb=defaultCb, options={}):
             ui.loadRealImage(frame)
             raw_idx = ui.fmap.raw_idx
 
-            frame = resizeFrame(frame)
-            frameToShow = frame
+            frame = cv2.resize(frame,(224,224))
+            frameToShow = frame.copy()
             frame = np.array([frame])
-            # print("{} processing ".format(time.time()))
             gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
-            # aGrid = sess.run(gridTensor,feed_dict={ph:frame})
-            if not currentGridName in unknownVisNodes:
-                aGrid, certainMap = sess.run([gridTensor,mapStack[raw_idx]],feed_dict={ph:frame})
-            else:
-                gradList = unknownVisNodes[currentGridName]
-                # if gradList[raw_idx] is None:
-                #     gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
-                # print("grad operation",gradList[raw_idx])
-                # aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
 
-                aGrid, certainMap,gradCamOut = sess.run([gridTensor,mapStack[raw_idx],gradCamOutT],feed_dict={ph:frame})
-
-                # reconst = reconst[0][0]
-                # cv2.imshow("unknownVis",reconst)
-
-                cv2.imshow("gradCam",cv2.resize(gradCamOut*10000,(224,224)))
-                # cv2.imshow("gradCam",gradCamOut)
-
-            # print(f"aGrid {aGrid.shape}{(columns,rows)}")
-
-            # aGrid = cv2.resize(aGrid, (500,500))
-            # defaultCb(aGrid)
-
-            # vggOut = sess.run(vgg.output,feed_dict={imPh:frame})
-            # print("{} nn argmax: {} {}".format(time.time(), np.argmax(vggOut,axis=1),preds))
-            # if args.show:
-            #     # cv2.putText(frame,"Persons: {}".format("3"),(40,40), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1,cv2.LINE_AA)
-
+            aGrid, certainMap,cam = sess.run([gridTensor,mapStack[raw_idx],camT],feed_dict={ph:frame})
+            heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
+            cv2.imshow("gradCam",coloredMap)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -176,31 +164,7 @@ async def main(ui=None,cb=defaultCb, options={}):
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
-    # ui.setGeometry(500, 300, 300, 400)
     ui = Ui()
     ui.show()
-    # asyncio.async(main())
     loop.run_until_complete(main(ui=ui))
-    # loop.run_forever()
     sys.exit(app.exec_())
-
-
-exit()
-# Below is junk
-
-
-im = cv2.imread("sample_images/ManCoffee.jpeg")
-im = cv2.resize(im, (224,224))
-gr = sess.run(gradCamOutT,{ph: [im] })
-plt.plot(gr)
-gr
-im6 = np.concatenate([im,im],axis=-1)
-im6e = np.expand_dims(im6,axis=0)
-im6e.shape
-ph = tf.placeholder(tf.float32,shape=(None,225,225,6))
-out = getGrid(ph)
-out.shape
-res=out.eval({ph:im6e},session=session)
-res.shape
-
-plt.imshow(im)

@@ -15,11 +15,13 @@ def gradCam(y,A):
     # x / (K.sqrt(K.mean(K.square(x))) + 1e-5)
     # gradCamRes = gradCamRes/ tf.sqrt(tf.mean(tf.square(gradCamRes))+1e-5)
     # normalized = tf.nn.l2_normalize(relu)
-    # normalized = relu/tf.sqrt(tf.reduce_mean(tf.square(relu)+1e-5))
+    # normaliized = relu/tf.sqrt(tf.reduce_mean(tf.square(relu)+1e-5))
     normalized = relu/(tf.reduce_max(relu)+1e-12)
     # tf.square
     return normalized
 
+import cv2
+import numpy as np
 def gradCamToHeatMap(cam,im):
     heatShape = im.shape[:2]
     heatmap = cv2.resize(cam[0],heatShape)
@@ -27,10 +29,10 @@ def gradCamToHeatMap(cam,im):
     return heatmap, colored
 
 if __name__ == "__main__":
-    import cv2
+
     from networks import getNetwork
     import matplotlib.pyplot as plt
-    import numpy as np
+
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
     nn,ph = getNetwork(name="VGG16")
