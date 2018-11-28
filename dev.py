@@ -12,7 +12,7 @@ from deconv import unknownVis, createGrad
 from gradCam import gradCam, gradCamToHeatMap
 from networks import getNetwork
 
-graph = tf.get_default_graph()
+
 def getLayers(type='Conv2D'):
     return [i for i in graph.get_operations() if i.type.lower() == type.lower()]
     # return [i.type for i in graph.get_operations()]
@@ -43,7 +43,7 @@ def constructGridNode(output):
     return result,(numColumns,numRows), mapStack
     # reshaped = tf.reshape(concated,(len*numColumns,width*numRows))
     # return reshaped
-
+graph = tf.get_default_graph()
 sess = tf.Session()
 tf.keras.backend.set_session(sess)
 
@@ -79,56 +79,10 @@ camT = gradCam(softmaxin,gradCamA)
 #  'block5_conv3/Conv2D': <tf.Tensor 'concat_251:0' shape=(322, 322) dtype=float32>}
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
-                    help="Input Video")
-parser.add_argument('--show', default=True,
-                    help="Show output window")
-
-args = parser.parse_args()
-
-
-
-loop  = asyncio.get_event_loop()
 
 def defaultCb(frame):
     # print("showing frame {}".format(fram))
     cv2.imshow('frame',frame)
-
-def illustrateDetections(frame,vggOut):
-    preds = tf.keras.applications.vgg16.decode_predictions(vggOut)[0][0][1]
-    cv2.putText(frameToShow,"{} {}".format(np.argmax(vggOut,axis=1),preds),(10,10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255,0,0),1,cv2.LINE_AA)
-
-
-from ui import Ui
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QThread
-import sys
-
-def junkish():
-            gradList = unknownVisNodes[currentGridName]
-            # if gradList[raw_idx] is None:
-            #     gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
-            # print("grad operation",gradList[raw_idx])
-            # aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
-
-            aGrid, certainMap,gradCamOut = sess.run([gridTensor,mapStack[raw_idx],gradCamOutT],feed_dict={ph:frame})
-
-            # reconst = reconst[0][0]
-            # cv2.imshow("unknownVis",reconst)
-            heatmap, coloredMap = gradCamToHeatMap(gradCamOut,frameToShow)
-            cv2.imshow("gradCam",coloredMap)
-                # cv2.imshow("gradCam",gradCamOut)
-
-            # print(f"aGrid {aGrid.shape}{(columns,rows)}")
-
-            # aGrid = cv2.resize(aGrid, (500,500))
-            # defaultCb(aGrid)
-
-            # vggOut = sess.run(vgg.output,feed_dict={imPh:frame})
-            # print("{} nn argmax: {} {}".format(time.time(), np.argmax(vggOut,axis=1),preds))
-            # if args.show:
-            #     # cv2.putText(frame,"Persons: {}".format("3"),(40,40), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1,cv2.LINE_AA)
 
 
 
@@ -162,9 +116,54 @@ async def main(ui=None,cb=defaultCb, options={}):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
+                        help="Input Video")
+    parser.add_argument('--show', default=True,
+                        help="Show output window")
 
+    args = parser.parse_args()
+
+
+
+    loop  = asyncio.get_event_loop()
+    from ui import Ui
+    from PyQt5.QtWidgets import QApplication
+    from PyQt5.QtCore import QThread
+    import sys
     app = QApplication(sys.argv)
     ui = Ui()
     ui.show()
     loop.run_until_complete(main(ui=ui))
     sys.exit(app.exec_())
+
+
+exit()
+
+def junkish():
+            gradList = unknownVisNodes[currentGridName]
+            # if gradList[raw_idx] is None:
+            #     gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
+            # print("grad operation",gradList[raw_idx])
+            # aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
+
+            aGrid, certainMap,gradCamOut = sess.run([gridTensor,mapStack[raw_idx],gradCamOutT],feed_dict={ph:frame})
+
+            # reconst = reconst[0][0]
+            # cv2.imshow("unknownVis",reconst)
+            heatmap, coloredMap = gradCamToHeatMap(gradCamOut,frameToShow)
+            cv2.imshow("gradCam",coloredMap)
+                # cv2.imshow("gradCam",gradCamOut)
+
+            # print(f"aGrid {aGrid.shape}{(columns,rows)}")
+
+            # aGrid = cv2.resize(aGrid, (500,500))
+            # defaultCb(aGrid)
+
+            # vggOut = sess.run(vgg.output,feed_dict={imPh:frame})
+            # print("{} nn argmax: {} {}".format(time.time(), np.argmax(vggOut,axis=1),preds))
+            # if args.show:
+            #     # cv2.putText(frame,"Persons: {}".format("3"),(40,40), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1,cv2.LINE_AA)
+def illustrateDetections(frame,vggOut):
+    preds = tf.keras.applications.vgg16.decode_predictions(vggOut)[0][0][1]
+    cv2.putText(frameToShow,"{} {}".format(np.argmax(vggOut,axis=1),preds),(10,10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255,0,0),1,cv2.LINE_AA)
