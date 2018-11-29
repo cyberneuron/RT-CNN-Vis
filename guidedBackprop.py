@@ -2,6 +2,12 @@
 from tensorflow.python.ops import gen_nn_ops
 import tensorflow as tf
 
+tf.keras.activations.relu
+tf.nn.relu
+
+tf.keras.activations.relu = tf.nn.relu
+
+
 @tf.RegisterGradient("Customlrn")
 def _CustomlrnGrad(op, grad):
     return grad
@@ -29,22 +35,29 @@ if __name__ == "__main__":
     from streamReader import StreamReader
     import itertools
     import cv2
+    import numpy as np
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
-    nn,ph = getNetwork(name="VGG16")
+    with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
+        nn,ph = getNetwork(name="VGG16")
     nn.summary()
     preSoftMax = nn.output.op.inputs[0]
     neuronOfInterest = tf.reduce_max(preSoftMax,axis=-1,keepdims=True)
+    neuronOfInterest
     graph = tf.get_default_graph()
     guidedT = guidedBackprop(graph,neuronOfInterest,ph)
+    guidedT
     im = cv2.imread('sample_images/ManCoffee.jpeg')
     im = cv2.imread('sample_images/cat_dog.png')
     im = cv2.resize(im,(224,224))
     # for i in range(1000):
-    with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
-        res = sess.run(guidedT,{ph:[im]})
+
+    # with graph.gradient_override_map({'Relu': 'GluidedRelu', 'LRN': 'Customlrn'}):
+    res = sess.run(guidedT,{ph:[im]})
+    res[0,570]
     res[0].shape
-    cv2.imwrite("guided.jpg",res[0][0]*100000)
+    res[0][0]
+    cv2.imwrite("guided.jpg",res[0][0]*60000)
     with StreamReader("http://192.168.16.101:8081/video") as cap:
 
         for frame,num in zip(cap.read(),itertools.count()):
