@@ -8,16 +8,14 @@ def guidedBackprop(neuronOfInterest,nnInput):
     vis = tf.gradients(neuronOfInterest,nnInput)
     return vis
 
-def registerConvBackprops(convOuts,sess=None):
-    sess = tf.get_default_session()
+def registerConvBackprops(convOuts,nnInput):
     backprops = {}
     for T, name in convOuts:
         x = tf.Variable(0)
-        sess.run(x.assign(0))
 
         mapOfInterest = T[...,x]
         # constuct grad according to it
-        gradT = guidedBackprop(mapOfInterest,nn.input)
+        gradT = guidedBackprop(mapOfInterest,nnInput)
         backprops[name] = gradT,x
     return backprops
 

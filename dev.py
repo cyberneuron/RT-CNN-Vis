@@ -8,9 +8,9 @@ import asyncio
 import time
 import math
 import matplotlib.pyplot as plt
-from deconv import unknownVis, createGrad
-from gradCam import gradCami, gradCamToHeatMap
-from guidedBackprop import registerBackpropVis
+
+from gradCam import gradCam, gradCamToHeatMap
+from guidedBackprop import registerConvBackprops
 from networks import getNetwork
 from maps import mapsToGrid
 
@@ -23,6 +23,8 @@ def getLayersOutputs(type='Conv2D'):
 
 graph = tf.get_default_graph()
 sess = tf.Session()
+sess.as_default()
+
 tf.keras.backend.set_session(sess)
 
 nn, ph = getNetwork("VGG16")
@@ -34,6 +36,7 @@ convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
 
 
 convBackprops = registerConvBackprops(convOutputs,nn.input)
+tf.initialize_variables([convBackprops[name][1] for name in convBackprops ])
 
 gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]

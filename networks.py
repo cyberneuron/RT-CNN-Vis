@@ -1,4 +1,6 @@
 import tensorflow as tf
+from tensorflow.python.ops import gen_nn_ops
+
 tf.keras.activations.relu = tf.nn.relu
 
 @tf.RegisterGradient("Customlrn")
@@ -13,6 +15,7 @@ def _GuidedReluGrad(op, grad):
 
 
 def getNetwork(name="ResNet50",gradients="relu"):
+    graph = tf.get_default_graph()
     with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
         knownNets = ["ResNet50","VGG16","VGG19"]
         assert name in knownNets , "Network should be one of {}".format(knownNets)
