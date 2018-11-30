@@ -9,9 +9,10 @@ import time
 import math
 import matplotlib.pyplot as plt
 from deconv import unknownVis, createGrad
-from gradCam import gradCam, gradCamToHeatMap
+from gradCam import gradCami, gradCamToHeatMap
+from guidedBackprop import registerBackpropVis
 from networks import getNetwork
-
+from maps import mapsToGrid
 
 def getLayers(type='Conv2D'):
     return [i for i in graph.get_operations() if i.type.lower() == type.lower()]
@@ -20,27 +21,6 @@ def getLayersOutputs(type='Conv2D'):
     return [(i.outputs[0],i.name) for i in graph.get_operations() if i.type.lower() == type.lower()]
     # return [i.type for i in graph.get_operations()]
 
-def constructGridNode(output):
-    layer = output
-    numMaps = int(layer.shape[-1])
-    numColumns = math.ceil(numMaps**0.5)
-    numRows = math.ceil(numMaps/numColumns)
-    zerosNum = numRows*numColumns-numMaps
-    zerosShape = [int(i) for i in layer.shape]
-    zerosShape[-1] = zerosNum
-    zeros = tf.zeros(
-        zerosShape,
-        dtype=tf.float32,
-        name=None)
-    concated = tf.concat([layer,zeros],-1)
-    len,width,depth= [s for s in concated.shape]
-    mapStack =tf.unstack(concated,axis=2)
-    rowStacks = [tf.concat(mapStack[i:i+numColumns],axis=1) for i in range(0,numColumns*numRows,numColumns)]
-    result = tf.concat(rowStacks,axis=0)
-    return result,(numColumns,numRows), mapStack
-    # reshaped = tf.reshape(concated,(len*numColumns,width*numRows))
-    # return reshaped
-
 graph = tf.get_default_graph()
 sess = tf.Session()
 tf.keras.backend.set_session(sess)
@@ -48,14 +28,16 @@ tf.keras.backend.set_session(sess)
 nn, ph = getNetwork("VGG16")
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
-convGrids = {name: constructGridNode(output[0]) for (output,name) in convOutputs}
-unknownVisNodes = unknownVis(graph,convGrids,ph)
+
+convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
 
 
-gradCamA = nn.layers[-6 ].output
+
+convBackprops = registerConvBackprops(convOutputs,nn.input)
+
+gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
-
 
 
 async def main(ui=None, options={}):
@@ -73,10 +55,12 @@ async def main(ui=None, options={}):
             frameToShow = frame.copy()
             frame = np.array([frame])
             gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
-
-            aGrid, certainMap,cam = sess.run([gridTensor,mapStack[raw_idx],camT],feed_dict={ph:frame})
+            neuronBackpropT,neuronSelectionT = convBackprops[currentGridName]
+            sess.run(neuronSelectionT.assign(raw_idx))
+            aGrid, certainMap,cam,neuronBackprop = sess.run([gridTensor,mapStack[raw_idx],camT,neuronBackpropT],feed_dict={ph:frame})
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
             cv2.imshow("gradCam",heatmap)
+            cv2.imshow("neuron-backprop",neuronBackprop[0])
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -156,3 +140,22 @@ def junkish():
 def illustrateDetections(frame,vggOut):
     preds = tf.keras.applications.vgg16.decode_predictions(vggOut)[0][0][1]
     cv2.putText(frameToShow,"{} {}".format(np.argmax(vggOut,axis=1),preds),(10,10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255,0,0),1,cv2.LINE_AA)
+
+
+
+gradCamA
+gthered =  tf.gather(
+    gradCamA,
+    5,
+    validate_indices=None,
+    name=None,
+    axis=-1
+)
+gthered
+x = tf.Variable(0)
+sess.run(x.assign(-2))
+gradCamA[...,x]
+lst = tf.constant([1,2,3])
+res =lst[x]
+sess.run(res)
+cl = nn.layers[4]

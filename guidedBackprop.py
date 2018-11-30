@@ -2,33 +2,25 @@
 from tensorflow.python.ops import gen_nn_ops
 import tensorflow as tf
 
-tf.keras.activations.relu
-tf.nn.relu
-
-tf.keras.activations.relu = tf.nn.relu
 
 
-@tf.RegisterGradient("Customlrn")
-def _CustomlrnGrad(op, grad):
-    return grad
-
-# register Relu gradients
-@tf.RegisterGradient("GuidedRelu")
-def _GuidedReluGrad(op, grad):
-    return tf.where(0. < grad, gen_nn_ops.relu_grad(grad, op.outputs[0]), tf.zeros_like(grad))
-
-def guidedBackprop(graph,neuronOfInterest,nnInput):
-    ret = {}
-    with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
-        vis = tf.gradients(neuronOfInterest,nnInput)
+def guidedBackprop(neuronOfInterest,nnInput):
+    vis = tf.gradients(neuronOfInterest,nnInput)
     return vis
 
-def createGrad(graph,map,input):
-    print("entering with")
-    with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
-        print("creating grad node")
-        grad = tf.gradients(map, input)
-    return grad
+def registerConvBackprops(convOuts,sess=None):
+    sess = tf.get_default_session()
+    backprops = {}
+    for T, name in convOuts:
+        x = tf.Variable(0)
+        sess.run(x.assign(0))
+
+        mapOfInterest = T[...,x]
+        # constuct grad according to it
+        gradT = guidedBackprop(mapOfInterest,nn.input)
+        backprops[name] = gradT,x
+    return backprops
+
 
 if __name__ == "__main__":
     from networks import getNetwork
@@ -38,25 +30,17 @@ if __name__ == "__main__":
     import numpy as np
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
-    with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
-        nn,ph = getNetwork(name="VGG16")
+    nn,ph = getNetwork(name="VGG16")
     nn.summary()
     preSoftMax = nn.output.op.inputs[0]
     neuronOfInterest = tf.reduce_max(preSoftMax,axis=-1,keepdims=True)
     neuronOfInterest
-    graph = tf.get_default_graph()
-    guidedT = guidedBackprop(graph,neuronOfInterest,ph)
+    guidedT = guidedBackprop(neuronOfInterest,ph)
     guidedT
     im = cv2.imread('sample_images/ManCoffee.jpeg')
     im = cv2.imread('sample_images/cat_dog.png')
     im = cv2.resize(im,(224,224))
-    # for i in range(1000):
-
-    # with graph.gradient_override_map({'Relu': 'GluidedRelu', 'LRN': 'Customlrn'}):
     res = sess.run(guidedT,{ph:[im]})
-    res[0,570]
-    res[0].shape
-    res[0][0]
     cv2.imwrite("guided.jpg",res[0][0]*60000)
     with StreamReader("http://192.168.16.101:8081/video") as cap:
 
