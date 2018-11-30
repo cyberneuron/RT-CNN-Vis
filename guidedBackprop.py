@@ -8,14 +8,16 @@ def guidedBackprop(neuronOfInterest,nnInput):
     vis = tf.gradients(neuronOfInterest,nnInput)
     return vis
 
-def registerConvBackprops(convOuts,nnInput,normalize=True):
+def registerConvBackprops(convOuts,nnInput,normalize=True,reduceMax=False):
     backprops = {}
     for T, name in convOuts:
         x = tf.Variable(0)
 
         mapOfInterest = T[...,x]
+        if reduceMax:
+            mapOfInterest = tf.reduce_max(mapOfInterest)
         # constuct grad according to it
-        print("Registering convolution layer backprop vis for  {name}:{T}")
+        print(f"Registering convolution layer backprop vis for  {name}:{T}")
         gradT = guidedBackprop([mapOfInterest],nnInput)[0]
         if normalize:
             gradT = tf.nn.relu(gradT)
