@@ -36,7 +36,9 @@ convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
 
 
 convBackprops = registerConvBackprops(convOutputs,nn.input)
-tf.initialize_variables([convBackprops[name][1] for name in convBackprops ])
+convBackprops
+
+sess.run(tf.variables_initializer([convBackprops[name][1] for name in convBackprops ]))
 
 gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]
@@ -59,10 +61,11 @@ async def main(ui=None, options={}):
             frame = np.array([frame])
             gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
             neuronBackpropT,neuronSelectionT = convBackprops[currentGridName]
-            sess.run(neuronSelectionT.assign(raw_idx))
+            if raw_idx < len(mapStack):
+                sess.run(neuronSelectionT.assign(raw_idx))
             aGrid, certainMap,cam,neuronBackprop = sess.run([gridTensor,mapStack[raw_idx],camT,neuronBackpropT],feed_dict={ph:frame})
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
-            cv2.imshow("gradCam",heatmap)
+            cv2.imshow("gradCam",coloredMap)
             cv2.imshow("neuron-backprop",neuronBackprop[0])
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -116,49 +119,8 @@ exit()
 #  'block5_conv2/Conv2D': <tf.Tensor 'concat_226:0' shape=(322, 322) dtype=float32>,
 #  'block5_conv3/Conv2D': <tf.Tensor 'concat_251:0' shape=(322, 322) dtype=float32>}
 
-def junkish():
-            gradList = unknownVisNodes[currentGridName]
-            # if gradList[raw_idx] is None:
-            #     gradList[raw_idx] = createGrad(graph,mapStack[raw_idx],ph)
-            # print("grad operation",gradList[raw_idx])
-            # aGrid, certainMap,reconst = sess.run([gridTensor,mapStack[raw_idx],gradList[raw_idx]],feed_dict={ph:frame})
 
-            aGrid, certainMap,gradCamOut = sess.run([gridTensor,mapStack[raw_idx],gradCamOutT],feed_dict={ph:frame})
 
-            # reconst = reconst[0][0]
-            # cv2.imshow("unknownVis",reconst)
-            heatmap, coloredMap = gradCamToHeatMap(gradCamOut,frameToShow)
-            cv2.imshow("gradCam",coloredMap)
-                # cv2.imshow("gradCam",gradCamOut)
-
-            # print(f"aGrid {aGrid.shape}{(columns,rows)}")
-
-            # aGrid = cv2.resize(aGrid, (500,500))
-            # defaultCb(aGrid)
-
-            # vggOut = sess.run(vgg.output,feed_dict={imPh:frame})
-            # print("{} nn argmax: {} {}".format(time.time(), np.argmax(vggOut,axis=1),preds))
-            # if args.show:
-            #     # cv2.putText(frame,"Persons: {}".format("3"),(40,40), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),1,cv2.LINE_AA)
 def illustrateDetections(frame,vggOut):
     preds = tf.keras.applications.vgg16.decode_predictions(vggOut)[0][0][1]
     cv2.putText(frameToShow,"{} {}".format(np.argmax(vggOut,axis=1),preds),(10,10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255,0,0),1,cv2.LINE_AA)
-
-
-
-gradCamA
-gthered =  tf.gather(
-    gradCamA,
-    5,
-    validate_indices=None,
-    name=None,
-    axis=-1
-)
-gthered
-x = tf.Variable(0)
-sess.run(x.assign(-2))
-gradCamA[...,x]
-lst = tf.constant([1,2,3])
-res =lst[x]
-sess.run(res)
-cl = nn.layers[4]
