@@ -13,6 +13,8 @@ from ui_main import Ui_MainWindow
 
 
 class FeaturesMap(QLabel):
+    cell_changed = pyqtSignal(int)
+
     def __init__(self):
         super().__init__()
         self._rows = 1
@@ -20,8 +22,8 @@ class FeaturesMap(QLabel):
         self.raw_idx = 0
 
     def mousePressEvent(self, event):
-        print(event.pos())
-        print(self.getRawNumber(event.pos()))
+        self.raw_idx = self.getRawNumber(event.pos())
+        self.cell_changed.emit(self.raw_idx)
 
     def setGridSize(self, size):
         assert len(size) == 2
@@ -32,11 +34,11 @@ class FeaturesMap(QLabel):
         cubeHeight = self.height() // self._cols
         cur_row = pos.x() // cubeWidth
         cur_col = pos.y() // cubeHeight
-        self.raw_idx = self._rows * cur_col + cur_row
-        return self.raw_idx
+        return self._rows * cur_col + cur_row
 
     def resetIdx(self):
         self.raw_idx = 0
+
 
 class Ui(QMainWindow):
     def __init__(self):
@@ -44,41 +46,75 @@ class Ui(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.buttons = ['Layer1', 'Layer2', 'Layer3'] * 8
-        self.setButtons(self.buttons)
+        self.conv_layers = ['Conv1', 'Layer2', 'Layer3'] * 8
+        self.fc_layers = ['FC1', 'Layer2', 'Layer3'] * 8
+        self.fillLayers(self.conv_layers, self.fc_layers)
 
         self.fmap = FeaturesMap()
         self.ui.scrollAreaMap.setWidget(self.fmap)
 
-        self.currentMap = self.buttons[0]
+        self.currentMap = self.conv_layers[0]
+        # self.currentFCLayer = self.conv_layers[0]
 
-    def setButtons(self, buttons):
-        widget = QWidget()
-        layout = QHBoxLayout()
-        for button in buttons:
-            btn = QPushButton(button)
-            btn.setFlat(True)
-            btn.clicked.connect(self.btnClicked)
-            layout.addWidget(btn)
-        widget.setLayout(layout)
-        self.ui.scrollArea.setWidget(widget)
+        self.fmap.cell_changed.connect(self.changeMapLabel)
+        self.ui.comboBoxConv.currentTextChanged.connect(self.ConvLayerChanged)
+        self.ui.comboBoxFC.currentTextChanged.connect(self.FCLayerChanged)
 
-        self.buttons = list(sorted(buttons))
-        self.currentMap = self.buttons[0]
+    @pyqtSlot(int)
+    def changeMapLabel(self, num):
+        self.ui.labelMapNum.setText(str(num))
 
-    @pyqtSlot()
-    def btnClicked(self):
-        self.currentMap = self.sender().text()
+    def fillLayers(self, conv_layers, fc_layers):
+        self.ui.comboBoxConv.clear()
+        self.ui.comboBoxFC.clear()
+        if conv_layers:
+            self.ui.comboBoxConv.addItems(conv_layers)
+            self.conv_layers = conv_layers
+        if fc_layers:
+            self.ui.comboBoxFC.addItems(fc_layers)
+            self.fc_layers = fc_layers
+
+    # def setButtons(self, buttons):
+    #     widget = QWidget()
+    #     layout = QHBoxLayout()
+    #     for button in buttons:
+    #         btn = QPushButton(button)
+    #         btn.setFlat(True)
+    #         btn.clicked.connect(self.btnClicked)
+    #         layout.addWidget(btn)
+    #     widget.setLayout(layout)
+    #     self.ui.scrollArea.setWidget(widget)
+    #
+    #     self.buttons = list(sorted(buttons))
+    #     self.currentMap = self.buttons[0]
+
+    @pyqtSlot(str)
+    def ConvLayerChanged(self, layer_name):
+        self.currentMap = layer_name
+        self.ui.labelMapName.setText(self.currentMap)
         self.fmap.resetIdx()
+        self.ui.labelMapNum.setText('0')
+
+    @pyqtSlot(str)
+    def FCLayerChanged(self, layer_name):
+        print(layer_name)
+        # self.currentMap = self.sender().text()
+        # self.fmap.resetIdx()
 
     def loadMap(self, image, size):
-        # img = cv2.resize(image, (self.fmap.width(), self.fmap.height()))
-        # print(self.fmap.width(), self.fmap.height())
-        img = (1 - image / (np.max(image) - np.min(image))) * 255
-        img = img.astype(np.uint8)
+        img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
         img = cv2.resize(img, (self.fmap.width(), self.fmap.height()),interpolation = cv2.INTER_NEAREST)
-        height, width = img.shape
-        qImg = QImage(img, width, height, QImage.Format_Grayscale8)
+
+        img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        # hsvImg = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+        # hsvImg[...,2] = hsvImg[...,2]*0.2
+        # cv2.cvtColor(hsvImg,cv2.COLOR_HSV2RGB)
+
+        height, width, _ = img.shape
+        bytesPerLine = 3 * width
+        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
+        # height, width = img.shape
+        # qImg = QImage(img, width, height, QImage.Format_Grayscale8)
         self.fmap.setPixmap(QPixmap(qImg))
         self.fmap.setGridSize(size)
 
@@ -91,12 +127,16 @@ class Ui(QMainWindow):
         self.ui.labelInput.setPixmap(QPixmap(qImg))
 
     def loadCell(self, image):
-        img = (1 - image / (np.max(image) - np.min(image))) * 255
-        img = img.astype(np.uint8)
         # img = cv2.resize(img, (self.ui.labelZoomed.width(), self.ui.labelZoomed.height()))
+        img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
         img = cv2.resize(img, (224, 224),interpolation = cv2.INTER_NEAREST)
-        height, width = img.shape
-        qImg = QImage(img, width, height, QImage.Format_Grayscale8)
+
+        img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+        height, width, _ = img.shape
+        bytesPerLine = 3 * width
+        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
+        # height, width = img.shape
+        # qImg = QImage(img, width, height, QImage.Format_Grayscale8)
         self.ui.labelZoomed.setPixmap(QPixmap(qImg))
 
 
