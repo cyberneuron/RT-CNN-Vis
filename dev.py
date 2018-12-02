@@ -44,10 +44,25 @@ gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
 
+close_main_loop = [False]
+
+# def rescale_img(image):
+#     img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
+#     return img
+#
+#
+# def rescale_img2(image):
+#     print('===================', image.shape, image.min(), image.max())
+#     # img = cv2.applyColorMap(np.uint8(255*image), cv2.COLORMAP_JET)
+#     img = image
+#     img = np.uint8((1. - (img - np.min(img))* 1. / (np.max(img) - np.min(img))) * 255)
+#     # print(type(img[0,0,0]))
+#     # print(image.shape, image.max(), img.max())
+#     return img
 
 async def main(ui=None, options={}):
     assert ui
-    ui.setButtons(convGrids.keys())
+    ui.fillLayers(convGrids.keys(), None)
 
     with StreamReader(args.stream) as cap:
 
@@ -63,7 +78,7 @@ async def main(ui=None, options={}):
             neuronBackpropT,neuronSelectionT = convBackprops[currentGridName]
             if raw_idx < len(mapStack):
                 sess.run(neuronSelectionT.assign(raw_idx))
-            aGrid, certainMap,cam,neuronBackprop = sess.run([gridTensor,mapStack[raw_idx],camT,neuronBackpropT],feed_dict={ph:frame})
+            aGrid, certainMap, cam, neuronBackprop = sess.run([gridTensor,mapStack[raw_idx],camT,neuronBackpropT],feed_dict={ph:frame})
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
             cv2.imshow("gradCam",coloredMap)
             cv2.imshow("neuron-backprop",neuronBackprop[0])
@@ -72,9 +87,28 @@ async def main(ui=None, options={}):
 
             ui.loadCell(certainMap)
             ui.loadMap(aGrid, (rows,columns))
+
             QApplication.processEvents()
 
+            if close_main_loop[0]:
+                break
 
+    sys.exit(0)
+
+
+import sys
+import signal
+from ui import Ui
+from PyQt5.QtWidgets import QApplication
+# from PyQt5.QtCore import QThread
+
+def sigint_handler(*args):
+    """Handler for the SIGINT signal."""
+    # sys.stderr.write('\r')
+    # if QMessageBox.question(None, '', "Are you sure you want to quit?",
+    #                         QMessageBox.Yes | QMessageBox.No,
+    #                         QMessageBox.No) == QMessageBox.Yes:
+    close_main_loop[0] = True
 
 
 if __name__ == '__main__':
@@ -85,19 +119,15 @@ if __name__ == '__main__':
                         help="Show output window")
 
     args = parser.parse_args()
-
-
-
     loop  = asyncio.get_event_loop()
-    from ui import Ui
-    from PyQt5.QtWidgets import QApplication
-    from PyQt5.QtCore import QThread
-    import sys
+
+    signal.signal(signal.SIGINT, sigint_handler)
+
     app = QApplication(sys.argv)
     ui = Ui()
     ui.show()
+
     loop.run_until_complete(main(ui=ui))
-    sys.exit(app.exec_())
 
 
 exit()
