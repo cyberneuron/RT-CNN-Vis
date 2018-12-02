@@ -14,6 +14,7 @@ from guidedBackprop import registerConvBackprops
 from networks import getNetwork
 from maps import mapsToGrid
 
+
 def getLayers(type='Conv2D'):
     return [i for i in graph.get_operations() if i.type.lower() == type.lower()]
     # return [i.type for i in graph.get_operations()]
@@ -33,8 +34,6 @@ convLayers = getLayers()
 
 convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
 
-
-
 convBackprops = registerConvBackprops(convOutputs,nn.input)
 convBackprops
 
@@ -44,21 +43,14 @@ gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
 
+print(getLayers(type='Dense'))
+print('==================')
+# TODO: fix this, (bad fast way to exit from programm)
 close_main_loop = [False]
 
-# def rescale_img(image):
-#     img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
-#     return img
-#
-#
-# def rescale_img2(image):
-#     print('===================', image.shape, image.min(), image.max())
-#     # img = cv2.applyColorMap(np.uint8(255*image), cv2.COLORMAP_JET)
-#     img = image
-#     img = np.uint8((1. - (img - np.min(img))* 1. / (np.max(img) - np.min(img))) * 255)
-#     # print(type(img[0,0,0]))
-#     # print(image.shape, image.max(), img.max())
-#     return img
+def rescale_img(image):
+    img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
+    return img
 
 async def main(ui=None, options={}):
     assert ui
@@ -85,8 +77,8 @@ async def main(ui=None, options={}):
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-            ui.loadCell(certainMap)
-            ui.loadMap(aGrid, (rows,columns))
+            ui.loadCell(rescale_img(certainMap))
+            ui.loadMap(rescale_img(aGrid), (rows,columns))
 
             QApplication.processEvents()
 

@@ -44,6 +44,10 @@ class Ui_MainWindow(object):
         self.labelMapNum.setGeometry(QtCore.QRect(210, 210, 61, 21))
         self.labelMapNum.setText("")
         self.labelMapNum.setObjectName("labelMapNum")
+        self.checkBoxColoredGreyScale = QtWidgets.QCheckBox(self.centralwidget)
+        self.checkBoxColoredGreyScale.setGeometry(QtCore.QRect(980, 20, 141, 21))
+        self.checkBoxColoredGreyScale.setChecked(True)
+        self.checkBoxColoredGreyScale.setObjectName("checkBoxColoredGreyScale")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1142, 20))
@@ -54,6 +58,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
+        self.checkBoxColoredGreyScale.stateChanged['int'].connect(MainWindow.changeColorMode)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -63,4 +68,5 @@ class Ui_MainWindow(object):
         self.labelZoomed.setText(_translate("MainWindow", "TextLabel"))
         self.labelFiltered.setText(_translate("MainWindow", "Your advertisement here"))
         self.labelMapName.setText(_translate("MainWindow", "Not chosen"))
+        self.checkBoxColoredGreyScale.setText(_translate("MainWindow", "Colored / GreyScale"))
 

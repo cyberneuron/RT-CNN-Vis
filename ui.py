@@ -45,6 +45,7 @@ class Ui(QMainWindow):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self._show_colored = True
 
         self.conv_layers = ['Conv1', 'Layer2', 'Layer3'] * 8
         self.fc_layers = ['FC1', 'Layer2', 'Layer3'] * 8
@@ -59,6 +60,12 @@ class Ui(QMainWindow):
         self.fmap.cell_changed.connect(self.changeMapLabel)
         self.ui.comboBoxConv.currentTextChanged.connect(self.ConvLayerChanged)
         self.ui.comboBoxFC.currentTextChanged.connect(self.FCLayerChanged)
+
+
+    @pyqtSlot(int)
+    def changeColorMode(self, state):
+        print(state)
+        self._show_colored = bool(state)
 
     @pyqtSlot(int)
     def changeMapLabel(self, num):
@@ -102,19 +109,19 @@ class Ui(QMainWindow):
         # self.fmap.resetIdx()
 
     def loadMap(self, image, size):
-        img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
-        img = cv2.resize(img, (self.fmap.width(), self.fmap.height()),interpolation = cv2.INTER_NEAREST)
+        img = cv2.resize(image, (self.fmap.width(), self.fmap.height()),interpolation = cv2.INTER_NEAREST)
 
-        img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
-        # hsvImg = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-        # hsvImg[...,2] = hsvImg[...,2]*0.2
-        # cv2.cvtColor(hsvImg,cv2.COLOR_HSV2RGB)
-
-        height, width, _ = img.shape
-        bytesPerLine = 3 * width
-        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
-        # height, width = img.shape
-        # qImg = QImage(img, width, height, QImage.Format_Grayscale8)
+        if self._show_colored:
+            img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+            # hsvImg = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+            # hsvImg[...,2] = hsvImg[...,2]*0.2
+            # cv2.cvtColor(hsvImg,cv2.COLOR_HSV2RGB)
+            height, width, _ = img.shape
+            bytesPerLine = 3 * width
+            qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
+        else:
+            height, width = img.shape
+            qImg = QImage(img, width, height, QImage.Format_Grayscale8)
         self.fmap.setPixmap(QPixmap(qImg))
         self.fmap.setGridSize(size)
 
@@ -127,16 +134,17 @@ class Ui(QMainWindow):
         self.ui.labelInput.setPixmap(QPixmap(qImg))
 
     def loadCell(self, image):
-        # img = cv2.resize(img, (self.ui.labelZoomed.width(), self.ui.labelZoomed.height()))
-        img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
-        img = cv2.resize(img, (224, 224),interpolation = cv2.INTER_NEAREST)
+        img = cv2.resize(image, (224, 224),interpolation = cv2.INTER_NEAREST)
 
-        img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
-        height, width, _ = img.shape
-        bytesPerLine = 3 * width
-        qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
-        # height, width = img.shape
-        # qImg = QImage(img, width, height, QImage.Format_Grayscale8)
+        if self._show_colored:
+            img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
+            height, width, _ = img.shape
+            bytesPerLine = 3 * width
+            qImg = QImage(img, width, height, bytesPerLine, QImage.Format_RGB888)
+        else:
+            height, width = img.shape
+            qImg = QImage(img, width, height, QImage.Format_Grayscale8)
+
         self.ui.labelZoomed.setPixmap(QPixmap(qImg))
 
 

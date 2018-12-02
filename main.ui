@@ -122,6 +122,22 @@
      <string/>
     </property>
    </widget>
+   <widget class="QCheckBox" name="checkBoxColoredGreyScale">
+    <property name="geometry">
+     <rect>
+      <x>980</x>
+      <y>20</y>
+      <width>141</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Colored / GreyScale</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -136,9 +152,25 @@
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>checkBoxColoredGreyScale</sender>
+   <signal>stateChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>changeColorMode(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1039</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1044</x>
+     <y>77</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
-  <slot>ConvLayerChanged(QString)</slot>
-  <slot>FCLayerChanged(QString)</slot>
+  <slot>changeColorMode(int)</slot>
  </slots>
 </ui>
