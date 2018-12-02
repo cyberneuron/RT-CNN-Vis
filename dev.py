@@ -18,9 +18,14 @@ from maps import mapsToGrid
 def getLayers(type='Conv2D'):
     return [i for i in graph.get_operations() if i.type.lower() == type.lower()]
     # return [i.type for i in graph.get_operations()]
+
 def getLayersOutputs(type='Conv2D'):
     return [(i.outputs[0],i.name) for i in graph.get_operations() if i.type.lower() == type.lower()]
     # return [i.type for i in graph.get_operations()]
+
+def getDenseTensors():
+    layers = nn.layers
+    return [layer.output for layer in layers if type(layer) is tf.keras.layers.Dense]
 
 graph = tf.get_default_graph()
 sess = tf.Session()
@@ -29,13 +34,14 @@ sess.as_default()
 tf.keras.backend.set_session(sess)
 
 nn, ph = getNetwork("VGG16")
+
+
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
 
 convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
 
 convBackprops = registerConvBackprops(convOutputs,nn.input)
-convBackprops
 
 sess.run(tf.variables_initializer([convBackprops[name][1] for name in convBackprops ]))
 
@@ -43,8 +49,8 @@ gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
 
-print(getLayers(type='Dense'))
-print('==================')
+print(getDenseTensors())
+
 # TODO: fix this, (bad fast way to exit from programm)
 close_main_loop = [False]
 

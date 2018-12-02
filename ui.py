@@ -64,7 +64,6 @@ class Ui(QMainWindow):
 
     @pyqtSlot(int)
     def changeColorMode(self, state):
-        print(state)
         self._show_colored = bool(state)
 
     @pyqtSlot(int)
