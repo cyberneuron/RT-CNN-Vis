@@ -29,7 +29,6 @@ class FeaturesMap(QLabel):
         self.cell_changed.emit(self.raw_idx)
 
     def setGridSize(self, size):
-        assert len(size) == 2
         self._rows, self._cols = size
 
     def getRawNumber(self, pos):
@@ -43,32 +42,40 @@ class FeaturesMap(QLabel):
         self.raw_idx = 0
 
 class DenseMap(QLabel):
+    cell_changed = pyqtSignal(int)
+
     def __init__(self, parent):
         super().__init__()
         self._rows = 1
         self._cols = 1
         self.raw_idx = 0
-        self._scroll_bar = parent.verticalScrollBar()
-        self._scroll_bar.sliderMoved.connect(self.sliderMoved)
+        self.cell_limit = 1
 
-    @pyqtSlot(int)
-    def sliderMoved(self, val):
-        print(val, self._scroll_bar.maximum())
+    def setGridSize(self, shape):
+         self._cols, self._rows, _ = shape
+
+    def setCellNumbers(self, number):
+        self.cell_limit = number
 
     def mousePressEvent(self, event):
         self.raw_idx = self.getRawNumber(event.pos())
         self.cell_changed.emit(self.raw_idx)
 
-    def setGridSize(self, size):
-        assert len(size) == 2
-        self._rows, self._cols = size
-
     def getRawNumber(self, pos):
-        cubeWidth = self.width() // self._rows
-        cubeHeight = self.height() // self._cols
-        cur_row = pos.x() // cubeWidth
-        cur_col = pos.y() // cubeHeight
-        return self._rows * cur_col + cur_row
+        p_height = self.pixmap().height()
+        s_height = self.height()
+        if p_height < s_height:
+            cubeWidth = self.width() / self._rows
+            dif = (s_height - p_height) // 2
+            cubeHeight = p_height / self._cols
+            cur_row = pos.x() // cubeWidth
+            cur_col = (pos.y() - dif ) // cubeHeight
+        else:
+            cubeWidth = self.width() / self._rows
+            cubeHeight = self.height() / self._cols
+            cur_row = pos.x() // cubeWidth
+            cur_col = pos.y() // cubeHeight
+        return int(self._rows * cur_col + cur_row)
 
     def resetIdx(self):
         self.raw_idx = 0
@@ -84,19 +91,20 @@ class Ui(QMainWindow):
         self.dense_layers = ['FC1', 'Layer2', 'Layer3'] * 8
         self.fillLayers(self.conv_layers, self.dense_layers)
 
-        self.fmap = FeaturesMap()
-        self.ui.scrollAreaMap.setWidget(self.fmap)
+        self.convMap = FeaturesMap()
+        self.ui.scrollAreaMap.setWidget(self.convMap)
 
         self.currentConv = self.conv_layers[0]
         self.currentDense = self.dense_layers[0]
 
-        self.fmap.cell_changed.connect(self.changeMapLabel)
+        self.convMap.cell_changed.connect(self.changeMapNum)
         self.ui.comboBoxConv.currentTextChanged.connect(self.ConvLayerChanged)
         self.ui.comboBoxFC.currentTextChanged.connect(self.DenseLayerChanged)
 
         self.paused = False
-        self.denseScrollLabel = DenseMap(self.ui.scrollAreaDense)
-        self.ui.scrollAreaDense.setWidget(self.denseScrollLabel)
+        self.denseMap = DenseMap(self.ui.scrollAreaDense)
+        self.ui.scrollAreaDense.setWidget(self.denseMap)
+        self.denseMap.cell_changed.connect(self.changeDenseNum)
 
     @pyqtSlot()
     def PausePlay(self):
@@ -111,8 +119,29 @@ class Ui(QMainWindow):
         self._show_colored = bool(state)
 
     @pyqtSlot(int)
-    def changeMapLabel(self, num):
+    def changeMapNum(self, num):
         self.ui.labelMapNum.setText(str(num))
+
+    @pyqtSlot(int)
+    def changeDenseNum(self, num):
+        if num < self.denseMap.cell_limit:
+            self.ui.labelDenseNum.setText(str(num))
+        else:
+            self.ui.labelDenseNum.setText('Out')
+
+    @pyqtSlot(str)
+    def ConvLayerChanged(self, layer_name):
+        self.currentConv = layer_name
+        self.ui.labelMapName.setText(self.currentConv)
+        self.ui.labelMapNum.setText('0')
+        self.convMap.resetIdx()
+
+    @pyqtSlot(str)
+    def DenseLayerChanged(self, layer_name):
+        self.currentDense = layer_name
+        self.ui.labelDenseName.setText(layer_name)
+        self.ui.labelDenseNum.setText('0')
+        # self.denseMap.resetIdx()
 
     def fillLayers(self, conv_layers, dense_layers):
         self.ui.comboBoxConv.clear()
@@ -123,19 +152,6 @@ class Ui(QMainWindow):
         if dense_layers:
             self.ui.comboBoxFC.addItems(dense_layers)
             self.dense_layers = dense_layers
-
-    @pyqtSlot(str)
-    def ConvLayerChanged(self, layer_name):
-        self.currentConv = layer_name
-        self.ui.labelMapName.setText(self.currentConv)
-        self.fmap.resetIdx()
-        self.ui.labelMapNum.setText('0')
-
-    @pyqtSlot(str)
-    def DenseLayerChanged(self, layer_name):
-        self.currentDense = layer_name
-        self.ui.labelDenseName.setText(layer_name)
-        self.ui.labelDenseNum.setText('0')
 
     # def setButtons(self, buttons):
     #     widget = QWidget()
@@ -151,8 +167,10 @@ class Ui(QMainWindow):
     #     self.buttons = list(sorted(buttons))
     #     self.currentConv = self.buttons[0]
 
-    def loadActivationScrollBox(self, map):
-        label = self.denseScrollLabel
+    def loadActivationScrollMap(self, map, cell_numbers):
+        label = self.denseMap
+        label.setCellNumbers(cell_numbers)
+        label.setGridSize(map.shape)
         img = cv2.cvtColor(map, cv2.COLOR_BGR2RGB)
         height, width, _ = img.shape
         bytesPerLine = 3 * width
@@ -174,7 +192,7 @@ class Ui(QMainWindow):
         label.setPixmap(pixmap)
 
     def loadMap(self, image, size):
-        img = cv2.resize(image, (self.fmap.width(), self.fmap.height()),
+        img = cv2.resize(image, (self.convMap.width(), self.convMap.height()),
                                  interpolation = cv2.INTER_NEAREST)
         if self._show_colored:
             img = cv2.applyColorMap(img, cv2.COLORMAP_JET)
@@ -187,8 +205,11 @@ class Ui(QMainWindow):
         else:
             height, width = img.shape
             qImg = QImage(img, width, height, QImage.Format_Grayscale8)
-        self.fmap.setPixmap(QPixmap(qImg))
-        self.fmap.setGridSize(size)
+        self.convMap.setPixmap(QPixmap(qImg))
+        self.convMap.setGridSize(size)
+
+    def setDenseValue(self, val):
+        self.ui.labelDenseVal.setText(str(val))
 
     def loadRealImage(self, image):
         label = self.ui.labelInput

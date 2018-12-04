@@ -58,11 +58,12 @@ def rescale_img(image):
     return img
 
 def values2Map(values, num_cols=20):
-    vals_filled = np.append(values, [0] * (num_cols - len(values) % num_cols))
+    size = len(values)
+    vals_filled = np.append(values, [0] * ((num_cols - len(values) % num_cols) % num_cols))
     value_map = vals_filled.reshape(-1, num_cols)
     scaled_map = (value_map-value_map.min()) / (value_map.max()-value_map.min())
     img = cv2.applyColorMap(np.uint8(scaled_map*255), cv2.COLORMAP_JET)
-    return img
+    return img, size
 
 async def main(ui=None, options={}):
     assert ui
@@ -79,21 +80,22 @@ async def main(ui=None, options={}):
             currentGridName = ui.currentConv
             currentDense = ui.currentDense
             ui.loadRealImage(frame)
-            raw_idx = ui.fmap.raw_idx
+            map_raw_idx = ui.convMap.raw_idx
+            dense_raw_idx = ui.denseMap.raw_idx
 
             frame = cv2.resize(frame,(224,224))
             frameToShow = frame.copy()
             frame = np.array([frame])
             gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
             neuronBackpropT,neuronSelectionT = convBackprops[currentGridName]
-            if raw_idx < len(mapStack):
-                sess.run(neuronSelectionT.assign(raw_idx))
-            sess_run = sess.run([gridTensor,mapStack[raw_idx],
+            if map_raw_idx < len(mapStack):
+                sess.run(neuronSelectionT.assign(map_raw_idx))
+            sess_run = sess.run([gridTensor,mapStack[map_raw_idx],
                                  camT,neuronBackpropT, denseLayers[currentDense]],
                                 feed_dict={ph:frame})
             aGrid, certainMap, cam, neuronBackprop, denseActs = sess_run
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
-            activationMap = values2Map(denseActs[0])
+            activationMap, cell_numbers = values2Map(denseActs[0])
             cv2.imshow("gradCam",coloredMap)
             cv2.imshow("neuron-backprop",neuronBackprop[0])
 
@@ -101,9 +103,12 @@ async def main(ui=None, options={}):
                 break
 
             ui.loadActivationMap(activationMap)
-            ui.loadActivationScrollBox(activationMap)
+            ui.loadActivationScrollMap(activationMap, cell_numbers)
+            # TODO: add check for number of cells here
             ui.loadCell(rescale_img(certainMap))
             ui.loadMap(rescale_img(aGrid), (rows,columns))
+            if dense_raw_idx < cell_numbers:
+                ui.setDenseValue(denseActs[0][dense_raw_idx])
 
             QApplication.processEvents()
 
