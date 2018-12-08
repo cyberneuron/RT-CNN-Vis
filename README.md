@@ -10,4 +10,10 @@ First, Activation maps of convolutional layers as well activations of fully conn
 
 ## Usage
 
-## Dockerfile 
+## Dockerfile
+
+## Troubleshooting
+
+### Could not connect to any X display.
+
+Run `xhost +local:docker`, also check [this](https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069)

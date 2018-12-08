@@ -31,7 +31,6 @@ def gradCamToHeatMap(cam,im):
 if __name__ == "__main__":
 
     from networks import getNetwork
-    import matplotlib.pyplot as plt
     from streamReader import StreamReader
     import itertools
     sess = tf.Session()

@@ -133,15 +133,14 @@ def sigint_handler(*args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
-    parser.add_argument('--stream', default="http://192.168.16.102:8080",
+    parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
+    # parser.add_argument('--stream', default="http://192.168.16.102:8080",
                         help="Input Video")
     parser.add_argument('--show', default=True,
                         help="Show output window")
 
     args = parser.parse_args()
     loop  = asyncio.get_event_loop()
-i
     signal.signal(signal.SIGINT, sigint_handler)
 
     app = QApplication(sys.argv)
