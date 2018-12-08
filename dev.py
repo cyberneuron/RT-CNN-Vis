@@ -16,11 +16,9 @@ from maps import mapsToGrid
 
 def getLayers(type='Conv2D'):
     return [i for i in graph.get_operations() if i.type.lower() == type.lower()]
-    # return [i.type for i in graph.get_operations()]
 
 def getLayersOutputs(type='Conv2D'):
     return [(i.outputs[0],i.name) for i in graph.get_operations() if i.type.lower() == type.lower()]
-    # return [i.type for i in graph.get_operations()]
 
 def getDenseTensors():
     layers = nn.layers
@@ -92,7 +90,6 @@ async def main(ui=None, options={}):
 
     sys.exit(0)
 
-
 import sys
 import signal
 from ui import Ui
@@ -117,7 +114,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     loop  = asyncio.get_event_loop()
-
+i
     signal.signal(signal.SIGINT, sigint_handler)
 
     app = QApplication(sys.argv)
@@ -126,28 +123,5 @@ if __name__ == '__main__':
 
     loop.run_until_complete(main(ui=ui))
 
-
-exit()
 # writer = tf.summary.FileWriter("outputgraph", sess.graph)
 # writer.close()
-# unknownVisNodes = {}
-# convGrids
-# {'block1_conv1/Conv2D': <tf.Tensor 'concat_9:0' shape=(1792, 1792) dtype=float32>,
-#  'block1_conv2/Conv2D': <tf.Tensor 'concat_19:0' shape=(1792, 1792) dtype=float32>,
-#  'block2_conv1/Conv2D': <tf.Tensor 'concat_33:0' shape=(1232, 1344) dtype=float32>,
-#  'block2_conv2/Conv2D': <tf.Tensor 'concat_47:0' shape=(1232, 1344) dtype=float32>,
-#  'block3_conv1/Conv2D': <tf.Tensor 'concat_65:0' shape=(896, 896) dtype=float32>,
-#  'block3_conv2/Conv2D': <tf.Tensor 'concat_83:0' shape=(896, 896) dtype=float32>,
-#  'block3_conv3/Conv2D': <tf.Tensor 'concat_101:0' shape=(896, 896) dtype=float32>,
-#  'block4_conv1/Conv2D': <tf.Tensor 'concat_126:0' shape=(644, 644) dtype=float32>,
-#  'block4_conv2/Conv2D': <tf.Tensor 'concat_151:0' shape=(644, 644) dtype=float32>,
-#  'block4_conv3/Conv2D': <tf.Tensor 'concat_176:0' shape=(644, 644) dtype=float32>,
-#  'block5_conv1/Conv2D': <tf.Tensor 'concat_201:0' shape=(322, 322) dtype=float32>,
-#  'block5_conv2/Conv2D': <tf.Tensor 'concat_226:0' shape=(322, 322) dtype=float32>,
-#  'block5_conv3/Conv2D': <tf.Tensor 'concat_251:0' shape=(322, 322) dtype=float32>}
-
-
-
-def illustrateDetections(frame,vggOut):
-    preds = tf.keras.applications.vgg16.decode_predictions(vggOut)[0][0][1]
-    cv2.putText(frameToShow,"{} {}".format(np.argmax(vggOut,axis=1),preds),(10,10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255,0,0),1,cv2.LINE_AA)
