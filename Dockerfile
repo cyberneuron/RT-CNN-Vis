@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:latest-gpu-py3 
+FROM tensorflow/tensorflow:latest-gpu-py3
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -105,3 +105,5 @@ RUN  cd /opencv/build &&\
 
 RUN apt-get update && apt-get -y install libgtk-3-dev libboost-all-dev
 RUN pip3 install PyQt5
+WORKDIR /src
+CMD ["python3", "main.py"]

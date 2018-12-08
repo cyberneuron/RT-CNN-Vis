@@ -1,0 +1,14 @@
+version: '2.4'
+services:
+  vis:
+    build: .
+    runtime: nvidia
+    environment:
+      - DISPLAY=$DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./:/src:rw
+      - ~/.keras:/root/.keras:rw
+
+#
+# docker run  --runtime nvidia --env DISPLAY=$DISPLAY --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"    -it -v=$(pwd)/..:$(pwd)/.. -w=$(pwd) basecv  bash
