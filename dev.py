@@ -7,7 +7,6 @@ from streamReader import StreamReader
 import asyncio
 import time
 import math
-import matplotlib.pyplot as plt
 
 from gradCam import gradCam, gradCamToHeatMap
 from guidedBackprop import registerConvBackprops
