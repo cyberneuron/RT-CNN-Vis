@@ -22,7 +22,7 @@ def getLayersOutputs(type='Conv2D'):
 
 def getDenseTensors():
     layers = nn.layers
-    return [layer.output for layer in layers if type(layer) is tf.keras.layers.Dense]
+    return { layer.name: layer.output.op.inputs[0] for layer in layers if type(layer) is tf.keras.layers.Dense}
 
 graph = tf.get_default_graph()
 sess = tf.Session()
@@ -32,9 +32,9 @@ tf.keras.backend.set_session(sess)
 
 nn, ph = getNetwork("VGG16")
 
-
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
+denseLayers = getDenseTensors()
 
 convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
 
@@ -46,8 +46,7 @@ gradCamA = nn.layers[-6].output
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
 
-print(getDenseTensors())
-
+# TODO: make qt part work in thread
 # TODO: fix this, (bad fast way to exit from programm)
 close_main_loop = [False]
 
@@ -55,38 +54,65 @@ def rescale_img(image):
     img = np.uint8((1. - (image - np.min(image)) * 1. / (np.max(image) - np.min(image))) * 255)
     return img
 
+def values2Map(values, num_cols=20):
+    size = len(values)
+    vals_filled = np.append(values, [0] * ((num_cols - len(values) % num_cols) % num_cols))
+    value_map = vals_filled.reshape(-1, num_cols)
+    scaled_map = (value_map-value_map.min()) / (value_map.max()-value_map.min())
+    img = cv2.applyColorMap(np.uint8(scaled_map*255), cv2.COLORMAP_JET)
+    return img, size
+
 async def main(ui=None, options={}):
     assert ui
-    ui.fillLayers(convGrids.keys(), None)
+    ui.fillLayers(convGrids.keys(), denseLayers.keys())
 
     with StreamReader(args.stream) as cap:
 
         for frame in cap.read():
-            currentGridName = ui.currentMap
+
+            if ui.paused:
+                frame = old_frame
+            else:
+                old_frame = frame
+            currentGridName = ui.currentConv
+            currentDense = ui.currentDense
             ui.loadRealImage(frame)
-            raw_idx = ui.fmap.raw_idx
+            map_raw_idx = ui.convMap.raw_idx
+            dense_raw_idx = ui.denseMap.raw_idx
 
             frame = cv2.resize(frame,(224,224))
             frameToShow = frame.copy()
             frame = np.array([frame])
             gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
             neuronBackpropT,neuronSelectionT = convBackprops[currentGridName]
-            if raw_idx < len(mapStack):
-                sess.run(neuronSelectionT.assign(raw_idx))
-            aGrid, certainMap, cam, neuronBackprop = sess.run([gridTensor,mapStack[raw_idx],camT,neuronBackpropT],feed_dict={ph:frame})
+            if map_raw_idx < len(mapStack):
+                sess.run(neuronSelectionT.assign(map_raw_idx))
+            sess_run = sess.run([gridTensor,mapStack[map_raw_idx],
+                                 camT,neuronBackpropT, denseLayers[currentDense]],
+                                feed_dict={ph:frame})
+            aGrid, certainMap, cam, neuronBackprop, denseActs = sess_run
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
+            activationMap, cell_numbers = values2Map(denseActs[0])
             cv2.imshow("gradCam",coloredMap)
             cv2.imshow("neuron-backprop",neuronBackprop[0])
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
+            ui.loadActivationMap(activationMap)
+            ui.loadActivationScrollMap(activationMap, cell_numbers)
+            # TODO: add check for number of cells here
             ui.loadCell(rescale_img(certainMap))
             ui.loadMap(rescale_img(aGrid), (rows,columns))
+            if dense_raw_idx < cell_numbers:
+                ui.setDenseValue(denseActs[0][dense_raw_idx])
 
             QApplication.processEvents()
 
             if close_main_loop[0]:
                 break
+
+
 
     sys.exit(0)
 
@@ -107,7 +133,8 @@ def sigint_handler(*args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
+    # parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
+    parser.add_argument('--stream', default="http://192.168.16.102:8080",
                         help="Input Video")
     parser.add_argument('--show', default=True,
                         help="Show output window")
