@@ -18,17 +18,21 @@ First, Activation maps of convolutional layers as well activations of fully conn
 
 ## Usage
 
-### Pure docker
-`docker build -t basecv .`
-`docker run  --runtime nvidia --env DISPLAY=$DISPLAY --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"    -it -v  -v=$(pwd)/..:$(pwd)/.. -w=$(pwd) basecv  python3 main.py`
+#### With pure Docker
+```
+docker build -t basecv .
+docker run  --runtime nvidia --env DISPLAY=$DISPLAY --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"    -it -v  -v=$(pwd)/..:$(pwd)/.. -w=$(pwd) basecv  python3 main.py
+```
 
-### Docker Compose
+### With Docker Compose
 
-`docker-compose build`
-`docker-compose run vis`
+```
+docker-compose build
+docker-compose run vis
+```
 
 ## Troubleshooting
 
-### Could not connect to any X display.
+#### Could not connect to any X display.
 
 Run `xhost +local:docker`, also check [this](https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069)
