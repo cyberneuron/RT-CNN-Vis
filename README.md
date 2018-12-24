@@ -40,7 +40,7 @@ optional arguments:
 docker-compose build
 docker-compose run vis#### With pure Docker
 ``` -->
-#### With pure Docker
+<!-- #### With pure Docker -->
 ## Troubleshooting
 
 #### Could not connect to any X display.
@@ -48,3 +48,24 @@ docker-compose run vis#### With pure Docker
 The X Server should allow connections from a docker container.
 
 Run `xhost +local:docker`, also check [this](https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069)
+
+
+# Apply Algorithms to Still Images
+
+Visualization algorithms reside in single files and can be applied to still images
+
+```
+$ python3 gradCam.py -h
+
+usage: gradCam.py [-h] [-i INPUT] [-o OUTPUT] [-n NETWORK]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Input image
+  -o OUTPUT, --output OUTPUT
+                        Output Image
+  -n NETWORK, --network NETWORK
+                        Network to visualise (VGG16,ResNet50 ...)
+
+```

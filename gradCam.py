@@ -1,4 +1,11 @@
+import argparse
+import itertools
+
 import tensorflow as tf
+import cv2
+import numpy as np
+
+from networks import getNetwork
 
 def gradCam(y,A):
     """
@@ -20,8 +27,6 @@ def gradCam(y,A):
     # tf.square
     return normalized
 
-import cv2
-import numpy as np
 def gradCamToHeatMap(cam,im):
     heatShape = im.shape[:2]
     heatmap = cv2.resize(cam[0],heatShape)
@@ -29,34 +34,37 @@ def gradCamToHeatMap(cam,im):
     return heatmap, colored
 
 if __name__ == "__main__":
-
-    from networks import getNetwork
-    from streamReader import StreamReader
-    import itertools
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i','--input', default="sample_images/cat_dog.png",
+                        help="Input image")
+    parser.add_argument('-o','--output', default="sample_images/cat_dog_cam.png",
+                        help="Output Image")
+    parser.add_argument('-n','--network', default="VGG16",
+                        help="Network to visualise (VGG16,ResNet50 ...)")
+    args = parser.parse_args()
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
-    nn,ph = getNetwork(name="VGG16")
+    nn,ph = getNetwork(name=args.network)
     nn.summary()
     preSoftMax = nn.output.op.inputs[0]
     lastConv = nn.layers[-6 ]
     A = lastConv.output
 
     gradCamT = gradCam(preSoftMax,A)
-    im = cv2.imread('sample_images/ManCoffee.jpeg')
-    im = cv2.imread('sample_images/cat_dog.png')
+    im = cv2.imread(args.input)
     im = cv2.resize(im,(224,224))
     # for i in range(1000):
-    res = sess.run(gradCamT,{ph:[im]})
-    heatmap,colored = gradCamToHeatMap(res,im)
+    res = sess.run(gradCamT, {ph: [im]})
+    heatmap,colored = gradCamToHeatMap(res, im)
 
-    cv2.imwrite("gradcam.jpg",colored)
-    with StreamReader("http://192.168.16.101:8081/video") as cap:
-
-        for frame,num in zip(cap.read(),itertools.count()):
-            im = cv2.resize(frame,(224,224))
-            res = sess.run(gradCamT,{ph:[im]})
-            heatmap,colored = gradCamToHeatMap(res,im)
-            cv2.imshow("cam",colored)
-            cv2.imwrite(f"cams/{num}.jpeg",colored)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+    cv2.imwrite(args.output, colored)
+    # with StreamReader("http://192.168.16.101:8081/video") as cap:
+    #
+    #     for frame,num in zip(cap.read(),itertools.count()):
+    #         im = cv2.resize(frame,(224,224))
+    #         res = sess.run(gradCamT,{ph:[im]})
+    #         heatmap,colored = gradCamToHeatMap(res,im)
+    #         cv2.imshow("cam",colored)
+    #         cv2.imwrite(f"cams/{num}.jpeg",colored)
+    #         if cv2.waitKey(1) & 0xFF == ord('q'):
+    #             break
