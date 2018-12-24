@@ -42,6 +42,9 @@ if __name__ == "__main__":
     parser.add_argument('-n','--network', default="VGG16",
                         help="Network to visualise (VGG16,ResNet50 ...)")
     args = parser.parse_args()
+    # args=parser.parse_args([])
+    args
+
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
     nn,ph = getNetwork(name=args.network)

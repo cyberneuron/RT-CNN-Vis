@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 
 from streamReader import StreamReader
-from gradCam import gradCam, gradCamToHeatMap
+from gradcam import gradCam, gradCamToHeatMap
 from guidedBackprop import registerConvBackprops, register_fc_backprops
 from networks import getNetwork
 from maps import mapsToGrid
