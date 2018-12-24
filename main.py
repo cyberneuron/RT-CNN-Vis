@@ -7,34 +7,44 @@ from streamReader import StreamReader
 import asyncio
 import time
 import math
-
+from collections import namedtuple, OrderedDict
 from gradCam import gradCam, gradCamToHeatMap
-from guidedBackprop import registerConvBackprops
+from guidedBackprop import registerConvBackprops,register_fc_backprops
 from networks import getNetwork
 from maps import mapsToGrid
-
-
-def getLayers(type='Conv2D'):
-    return [i for i in graph.get_operations() if i.type.lower() == type.lower()]
-
-def getLayersOutputs(type='Conv2D'):
-    return [(i.outputs[0],i.name) for i in graph.get_operations() if i.type.lower() == type.lower()]
-
-def getDenseTensors():
-    layers = nn.layers
-    return { layer.name: layer.output.op.inputs[0] for layer in layers if type(layer) is tf.keras.layers.Dense}
-def getLastConv():
-    layers = nn.layers
-    return [layer.output for layer in layers if type(layer) is tf.keras.layers.Conv2D][0]
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
 # parser.add_argument('--stream', default="http://191.167.15.101:8079",
-                    help="Input Video")
-parser.add_argument('--show', default=True,
-                    help="Show output window")
+                    help="Video stram URI, path to video or webcam number based on which the network is visualized")
+# parser.add_argument('--show', default=True,
+#                     help="Show output window")
 parser.add_argument('--network', default="VGG16",
-                    help="Network to visualise")
+                    help="Network to visualise (VGG16,ResNet50 ...)")
+
+
+def get_outputs_from_graph(type='Conv2D'):
+    assert type in ['Conv2D']
+    return OrderedDict((i.name, i.outputs[0]) for i in graph.get_operations() if i.type.lower() == type.lower())
+
+def get_outputs_from_model(layer_type="Dense",pre_eactivation=True):
+    assert layer_type in ["Dense"]
+    Layer = getattr(tf.keras.layers,layer_type)
+    layers = nn.layers
+    def get_layer_output(layer):
+        if pre_eactivation:
+            return layer.output.op.inputs[0]
+        else:
+            return layer.output
+    # Outputs = namedtuple(type+"Outputs",[layer.name if type(layer) is Layer])
+    return OrderedDict( (layer.name, get_layer_output(layer) ) for layer in layers if type(layer) is Layer)
+
+
+def getLastConv():
+    layers = nn.layers
+    return [layer.output for layer in layers if type(layer) is tf.keras.layers.Conv2D][-2]
+
+
 
 args = parser.parse_args()
 graph = tf.get_default_graph()
@@ -42,20 +52,29 @@ sess = tf.Session()
 sess.as_default()
 
 tf.keras.backend.set_session(sess)
+network_name = args.network
+# network_name = "MobileNet"
 
-nn, ph = getNetwork(args.network)
+nn, ph = getNetwork(network_name)
+print(nn.summary())
 
-convOutputs = getLayersOutputs()
-convLayers = getLayers()
-denseLayers = getDenseTensors()
+convOutputs = get_outputs_from_graph(type='Conv2D')
 
-convGrids = {name: mapsToGrid(output[0]) for (output,name) in convOutputs}
+
+
+convGrids = OrderedDict( (name, mapsToGrid(output[0])) for name, output in convOutputs.items())
+
+
 
 convBackprops = registerConvBackprops(convOutputs,nn.input)
+
+fc_outputs = get_outputs_from_model(layer_type="Dense")
+fc_backprops = register_fc_backprops(fc_outputs,nn.input)
 
 sess.run(tf.variables_initializer([convBackprops[name][1] for name in convBackprops ]))
 
 gradCamA = getLastConv()
+gradCamA
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
 
@@ -77,7 +96,7 @@ def values2Map(values, num_cols=20):
 
 async def main(ui=None, options={}):
     assert ui
-    ui.fillLayers(convGrids.keys(), denseLayers.keys())
+    ui.fillLayers(convGrids.keys(), fc_outputs.keys())
 
     with StreamReader(args.stream) as cap:
 
@@ -97,17 +116,21 @@ async def main(ui=None, options={}):
             frameToShow = frame.copy()
             frame = np.array([frame])
             gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
-            neuronBackpropT,neuronSelectionT = convBackprops[currentGridName]
+            neuronBackpropT,map_neuron_selection_T = convBackprops[currentGridName]
             if map_raw_idx < len(mapStack):
-                sess.run(neuronSelectionT.assign(map_raw_idx))
+                sess.run(map_neuron_selection_T.assign(map_raw_idx))
+
+            sess.run(fc_backprops[currentDense].selection.assign(dense_raw_idx))
             sess_run = sess.run([gridTensor,mapStack[map_raw_idx],
-                                 camT,neuronBackpropT, denseLayers[currentDense]],
+                                 camT,neuronBackpropT, fc_outputs[currentDense],fc_backprops[currentDense].output],
                                 feed_dict={ph:frame})
-            aGrid, certainMap, cam, neuronBackprop, denseActs = sess_run
+            aGrid, certainMap, cam, neuronBackprop, denseActs,fc_backprop = sess_run
             heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
             activationMap, cell_numbers = values2Map(denseActs[0])
             cv2.imshow("gradCam",coloredMap)
             cv2.imshow("neuron-backprop",neuronBackprop[0])
+            print(fc_backprop.shape)
+            cv2.imshow("neuron-backprop-fc",fc_backprop[0])
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

@@ -1,16 +1,18 @@
 # deconv gradients
 from tensorflow.python.ops import gen_nn_ops
 import tensorflow as tf
+from collections import namedtuple, OrderedDict
 
 
+BackPropTensors = namedtuple("BackpropTensors",["output","selection"])
 
 def guidedBackprop(neuronOfInterest,nnInput):
     vis = tf.gradients(neuronOfInterest,nnInput)
     return vis
 
 def registerConvBackprops(convOuts,nnInput,normalize=True,reduceMax=True):
-    backprops = {}
-    for T, name in convOuts:
+    backprops = OrderedDict()
+    for name,T in convOuts.items():
         x = tf.Variable(0)
 
         mapOfInterest = T[...,x]
@@ -25,6 +27,18 @@ def registerConvBackprops(convOuts,nnInput,normalize=True,reduceMax=True):
         backprops[name] = gradT,x
     return backprops
 
+def register_fc_backprops(fc_outs,nn_input,normalize=True):
+    backprops = OrderedDict()
+    for name,T in fc_outs.items():
+        x = tf.Variable(0)
+        neuron_of_interest = T[...,x]
+        print(f"Registering fully connected layer backprop vis for {name}:{T}")
+        gradT = guidedBackprop([neuron_of_interest],nn_input)[0]
+        if normalize:
+            gradT = tf.nn.relu(gradT)
+            gradT = gradT/(tf.reduce_max(gradT)+1e-10)
+        backprops[name] = BackPropTensors(gradT,x)
+    return backprops
 
 if __name__ == "__main__":
     from networks import getNetwork
