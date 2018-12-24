@@ -21,10 +21,10 @@ First, Activation maps of convolutional layers as well activations of fully conn
 #### With pure Docker
 ```
 docker build -t basecv .
-docker run  --runtime nvidia --env DISPLAY=$DISPLAY --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"    -it -v  -v=$(pwd)/..:$(pwd)/.. -w=$(pwd) basecv  python3 main.py
+docker run  --runtime nvidia --env DISPLAY=$DISPLAY -v="/tmp/.X11-unix:/tmp/.X11-unix:rw"  -v=$(pwd)/.keras:/root/.keras  -v="$(pwd)/..:$(pwd)/.." -w=$(pwd) -it  basecv python3 main.py
 ```
 
-### With Docker Compose
+#### With Docker Compose
 
 ```
 docker-compose build

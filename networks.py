@@ -17,7 +17,20 @@ def _GuidedReluGrad(op, grad):
 def getNetwork(name="ResNet50",gradients="relu"):
     graph = tf.get_default_graph()
     with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
-        knownNets = ["ResNet50","VGG16","VGG19"]
+        knownNets = ['DenseNet121',
+             'DenseNet169',
+             'DenseNet201',
+             'InceptionResNetV2',
+             'InceptionV3',
+             'MobileNet',
+             'MobileNetV2',
+             'NASNetLarge',
+             'NASNetMobile',
+             'ResNet50',
+              'VGG16',
+             'VGG19',
+             'Xception']
+        # knownNets = ["ResNet50","VGG16","VGG19"]
         assert name in knownNets , "Network should be one of {}".format(knownNets)
         ph = tf.placeholder(tf.float32, shape=(None,224, 224,3),name="cnnInput")
         nn = getattr(tf.keras.applications,name)

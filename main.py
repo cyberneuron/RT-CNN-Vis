@@ -23,14 +23,27 @@ def getLayersOutputs(type='Conv2D'):
 def getDenseTensors():
     layers = nn.layers
     return { layer.name: layer.output.op.inputs[0] for layer in layers if type(layer) is tf.keras.layers.Dense}
+def getLastConv():
+    layers = nn.layers
+    return [layer.output for layer in layers if type(layer) is tf.keras.layers.Conv2D][0]
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
+# parser.add_argument('--stream', default="http://191.167.15.101:8079",
+                    help="Input Video")
+parser.add_argument('--show', default=True,
+                    help="Show output window")
+parser.add_argument('--network', default="VGG16",
+                    help="Network to visualise")
+
+args = parser.parse_args()
 graph = tf.get_default_graph()
 sess = tf.Session()
 sess.as_default()
 
 tf.keras.backend.set_session(sess)
 
-nn, ph = getNetwork("VGG16")
+nn, ph = getNetwork(args.network)
 
 convOutputs = getLayersOutputs()
 convLayers = getLayers()
@@ -42,7 +55,7 @@ convBackprops = registerConvBackprops(convOutputs,nn.input)
 
 sess.run(tf.variables_initializer([convBackprops[name][1] for name in convBackprops ]))
 
-gradCamA = nn.layers[-6].output
+gradCamA = getLastConv()
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
 
@@ -132,14 +145,6 @@ def sigint_handler(*args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
-    # parser.add_argument('--stream', default="http://192.168.16.102:8080",
-                        help="Input Video")
-    parser.add_argument('--show', default=True,
-                        help="Show output window")
-
-    args = parser.parse_args()
     loop  = asyncio.get_event_loop()
     signal.signal(signal.SIGINT, sigint_handler)
 
