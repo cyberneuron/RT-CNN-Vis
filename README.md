@@ -50,14 +50,15 @@ The X Server should allow connections from a docker container.
 Run `xhost +local:docker`, also check [this](https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069)
 
 
-# Apply Algorithms to Still Images
+## Apply Algorithms to Still Images
 
 Visualization algorithms reside in single files and can be applied to still images
 
 ```
-$ python3 gradCam.py -h
+$ python3 gradcam.py -h
 
-usage: gradCam.py [-h] [-i INPUT] [-o OUTPUT] [-n NETWORK]
+usage: gradcam.py [-h] [-i INPUT] [-o OUTPUT] [-n NETWORK]
+                  [--convindex CONVINDEX]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -66,6 +67,40 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         Output Image
   -n NETWORK, --network NETWORK
-                        Network to visualise (VGG16,ResNet50 ...)
+                        Network (VGG16,ResNet50 ...)
+  --convindex CONVINDEX
+                        Index of convolutional layer to use in the algorithm
+                        (-1 for last layer)
 
 ```
+
+<table border=0 >
+	<tbody>
+    <tr>
+  		<td>  </td>
+  		<td align="center" colspan="2"> Last Convolutional Layer </td>
+  		<td align="center" colspan="2"> Last-1 Convolutional Layer </td>
+  	</tr>
+    <tr>
+  		<td>  </td>
+  		<td align="center"> ResNet50 </td>
+  		<td align="center"> VGG16 </td>
+  		<td align="center"> ResNet50</td>
+  		<td align="center"> VGG16</td>
+  	</tr>
+		<tr>
+			<td width="16%" align="center"> Top-1 </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_resnet_conv1_0.png"> </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_vgg_conv1_0.png"> </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_resnet_conv2_0.png"> </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_vgg_conv2_0.png"> </td>
+		</tr>
+		<tr>
+			<td width="16%" align="center"> Top-2 </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_resnet_conv1_1.png"> </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_vgg_conv1_1.png"> </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_resnet_conv2_1.png"> </td>
+			<td width="21%" > <img src="./sample_images/cat_dog_cam_vgg_conv2_1.png"> </td>
+		</tr>
+	</tbody>
+</table>

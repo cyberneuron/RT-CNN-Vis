@@ -16,7 +16,8 @@ def _GuidedReluGrad(op, grad):
 
 def getNetwork(name="ResNet50",gradients="relu"):
     graph = tf.get_default_graph()
-    with graph.gradient_override_map({'Relu': 'GuidedRelu', 'LRN': 'Customlrn'}):
+    gradients_overwrite_map = {'Relu': 'GuidedRelu', 'LRN': 'Customlrn'} if gradients else {}
+    with graph.gradient_override_map(gradients_overwrite_map):
         knownNets = ['DenseNet121',
              'DenseNet169',
              'DenseNet201',

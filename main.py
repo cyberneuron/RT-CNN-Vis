@@ -14,7 +14,7 @@ from gradcam import gradCam, gradCamToHeatMap
 from guidedBackprop import registerConvBackprops, register_fc_backprops
 from networks import getNetwork
 from maps import mapsToGrid
-from utils import get_outputs_from_graph, get_outputs_from_model, getLastConv
+from utils import get_outputs_from_graph, get_outputs_from_model, getConvOutput
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
@@ -52,7 +52,7 @@ fc_backprops = register_fc_backprops(fc_outputs,nn.input)
 
 sess.run(tf.variables_initializer([convBackprops[name][1] for name in convBackprops ]))
 
-gradCamA = getLastConv(nn)
+gradCamA = getConvOutput(nn,-1)
 gradCamA
 softmaxin = nn.output.op.inputs[0]
 camT = gradCam(softmaxin,gradCamA)
