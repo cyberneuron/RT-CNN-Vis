@@ -41,11 +41,10 @@ class StreamReader:
 
     def read(self):
         while True:
-            with self.read_lock:
-                grabbed = self.grabbed
-                frame = None
-                if grabbed:
-                    frame = self.frame.copy()
+            grabbed = self.grabbed
+            frame = None
+            if grabbed:
+                frame = self.frame.copy()
             if grabbed:
                 yield frame
             else:

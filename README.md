@@ -1,12 +1,15 @@
 # Real Time CNN Visualization
 
-This is an UI application, which allows to visualize Convolutional Neural Networks in real time.
-First, Activation maps of convolutional layers as well activations of fully connected layer are visualized and available for applying more advance visualization techniques.
+This is a platform for real time visualization of Convolutional Neural Networks.
 
-## Visualization Algorithms
+The aim of the platform is to be a handful tool for interactive quick analysis of networks.
 
-* [Grad-CAM](https://arxiv.org/abs/1610.02391 "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization")
-* [Guided Backprop](https://arxiv.org/abs/1412.6806 "Striving for Simplicity: The All Convolutional Net")
+Activation maps of convolutional layers as well activations of fully connected layer are visualized. Visualized activations can be clicked interactively for applying more advance visualization techniques to corresponding neurons.
+
+The FPS is in the order of magnitude (\*~0.4) of the FPS of the visualized network. The latter is achieved by creating a single graph for all the visualizations in such a way that given an input frame all the required visualizations in certain moment of time are obtained on the GPU by single pass through the graph without backward and forward data communications with the GPU.
+
+<img src="./sample_images/out_optimized.gif">
+
 
 ## Requirements
 
@@ -41,13 +44,20 @@ docker-compose build
 docker-compose run vis#### With pure Docker
 ``` -->
 <!-- #### With pure Docker -->
-## Troubleshooting
+### Troubleshooting
 
 #### Could not connect to any X display.
 
 The X Server should allow connections from a docker container.
 
 Run `xhost +local:docker`, also check [this](https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069)
+
+## Visualization Algorithms
+Currently available:
+* [Grad-CAM](https://arxiv.org/abs/1610.02391 "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization")
+* [Guided Backprop](https://arxiv.org/abs/1412.6806 "Striving for Simplicity: The All Convolutional Net")
+
+Extendable with other algorithms, required computation for which is in the order of magnitude of forward/backward pass through the network.
 
 
 ## Apply Algorithms to Still Images
