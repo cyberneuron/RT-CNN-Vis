@@ -14,19 +14,30 @@ The FPS is in the order of magnitude (\*~0.4) of the FPS of the visualized netwo
 ## Requirements
 
 * [Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
-* [Docker Compose](https://docs.docker.com/compose/install/) (optional)
+
+It is recommended to run on GPU, as with the CPU version the FPS will be very low. To run on GPU, also the following is required.  
+
 * Recent NVIDIA drivers (`nvidia-384` on Ubuntu)
 * [NVIDIA Docker](https://github.com/NVIDIA/nvidia-docker )
 
 
 ## Usage
-
+### GPU version
 ```
 docker build -t basecv . # Build Docker image which contains all the requirements
 docker run  --runtime nvidia --env DISPLAY=$DISPLAY -v="/tmp/.X11-unix:/tmp/.X11-unix:rw"  -v=$(pwd)/.keras:/root/.keras  -v="$(pwd)/..:$(pwd)/.." -w=$(pwd) -it  basecv python3 main.py --stream "your/stream/uri"
 ```
 
-`python3 main.py -h`
+### CPU version
+
+```
+docker build -t basecv -f Dockerfile.cpu . # Build Docker image which contains all the requirements
+docker run  --env DISPLAY=$DISPLAY -v="/tmp/.X11-unix:/tmp/.X11-unix:rw"  -v=$(pwd)/.keras:/root/.keras  -v="$(pwd)/..:$(pwd)/.." -w=$(pwd) -it  basecv python3 main.py --stream "your/stream/uri"
+```
+
+
+
+`python3 main.py -h # Gives information on available parameters`
 
 ```
 usage: main.py [-h] [--stream STREAM] [--network NETWORK]
