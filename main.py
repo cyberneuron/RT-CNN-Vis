@@ -33,15 +33,20 @@ args = parser.parse_args()
 graph = tf.get_default_graph()
 sess = tf.Session()
 sess.as_default()
-
+sess.run
 tf.keras.backend.set_session(sess)
 network_name = args.network
 # network_name = "MobileNet"
 
 nn, ph = getNetwork(network_name)
+# from getyolo import get_yolo
+# nn, ph = get_yolo()
 print(nn.summary())
 
-convOutputs = get_outputs_from_graph(type='Conv2D')
+# convOutputs = get_outputs_from_graph(type='Conv2D')
+convOutputs = get_outputs_from_model(nn,layer_type='Conv2D')
+convOutputs
+
 
 convGrids = OrderedDict( (name, mapsToGrid(output[0])) for name, output in convOutputs.items())
 
@@ -114,16 +119,22 @@ async def main(ui=None, options={}):
                 assignWhenChanged(map_neuron_selection_T, map_raw_idx)
             assignWhenChanged(fc_backprops[currentDense].selection, dense_raw_idx)
             timer.tick("running main session")
-            sess_run = sess.run([gridTensor,mapStack[map_raw_idx],
-                                 camT,neuronBackpropT, fc_outputs[currentDense]],
+            fetches = {
+                "grid": gridTensor,
+                "map": mapStack[map_raw_idx],
+                "cam": camT,
+                "neuronBackprop": neuronBackpropT,
+                "fc_out": fc_outputs[currentDense]
+            }
+            fetched = sess.run(fetches,
                                 feed_dict={ph:frame})
             timer.tick("Session passed")
-            aGrid, certainMap, cam, neuronBackprop, denseActs = sess_run
-            heatmap, coloredMap = gradCamToHeatMap(cam,frameToShow)
-            activationMap, cell_numbers = values2Map(denseActs[0])
-            timer.tick("gradcam generated")
+            # aGrid, certainMap, cam, neuronBackprop, denseActs = sess_run
+            heatmap, coloredMap = gradCamToHeatMap(fetched["cam"],frameToShow)
+            activationMap, cell_numbers = values2Map(fetched["fc_out"][0])
+            timer.tick("gradcami generated")
             cv2.imshow("gradCam",coloredMap)
-            cv2.imshow("neuron-backprop",neuronBackprop[0])
+            cv2.imshow("neuron-backprop",fetched["neuronBackprop"][0])
 
             print(framenum)
             # cv2.imshow("neuron-backprop-fc",fc_backprop[0])
@@ -134,10 +145,10 @@ async def main(ui=None, options={}):
             ui.loadActivationMap(activationMap)
             ui.loadActivationScrollMap(activationMap, cell_numbers)
             # TODO: add check for number of cells here
-            ui.loadCell(rescale_img(certainMap))
-            ui.loadMap(rescale_img(aGrid), (rows,columns))
+            ui.loadCell(rescale_img(fetched["map"]))
+            ui.loadMap(rescale_img(fetched["grid"]), (rows,columns))
             if dense_raw_idx < cell_numbers:
-                ui.setDenseValue(denseActs[0][dense_raw_idx])
+                ui.setDenseValue(fetched["fc_out"][0][dense_raw_idx])
 
             QApplication.processEvents()
             timer.tick("event processed")
