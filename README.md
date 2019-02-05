@@ -6,7 +6,7 @@ The aim of the platform is to be a handful tool for interactive quick analysis o
 
 Activation maps of convolutional layers as well activations of fully connected layer are visualized. Visualized activations can be clicked interactively for applying more advance visualization techniques to corresponding neurons.
 
-The FPS is in the order of magnitude (\*~0.4) of the FPS of the visualized network. The latter is achieved by creating a single graph for all the visualizations in such a way that given an input frame all the required visualizations in certain moment of time are obtained on the GPU by single pass through the graph without backward and forward data communications with the GPU.
+The FPS is in the order of magnitude (\*~0.4) of the FPS of the visualized network. For example ResNet50 is visualized with FPS ~40 on GTX 1080 Ti. The latter is achieved by creating a single graph for all the visualizations in such a way that given an input frame all the required visualizations in certain moment of time are obtained on the GPU by single pass through the graph without backward and forward data communications with the GPU.
 
 <img src="./sample_images/out_optimized.gif">
 
@@ -35,7 +35,7 @@ docker build -t basecv -f Dockerfile.cpu . # Build Docker image which contains a
 docker run  --env DISPLAY=$DISPLAY -v="/tmp/.X11-unix:/tmp/.X11-unix:rw"  -v=$(pwd)/.keras:/root/.keras  -v="$(pwd)/..:$(pwd)/.." -w=$(pwd) -it  basecv python3 main.py --stream "your/stream/uri"
 ```
 
-
+### Arguments
 
 `python3 main.py -h # Gives information on available parameters`
 
@@ -44,10 +44,14 @@ usage: main.py [-h] [--stream STREAM] [--network NETWORK]
 
 optional arguments:
   -h, --help         show this help message and exit
-  --stream STREAM    Video stram URI, path to video or webcam number based on
-                     which the network is visualized
-  --network NETWORK  Network to visualise (VGG16,ResNet50 ...)
+  --stream STREAM    Video stram URI, webcam number or path to a video based
+                     on which the network is visualized
+  --network NETWORK  Network to visualise: One of built in keras applications
+                     (VGG16,ResNet50 ...) or path to .h5 file
 ```
+
+For example, one could visualize YOLO by creating it's translation to Keras as described in https://github.com/qqwweee/keras-yolo3  and then by passing path to .h5 file using --network parameter.
+
 <!-- #### With Docker Compose
 
 ```

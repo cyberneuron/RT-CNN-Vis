@@ -21,11 +21,11 @@ from timed import timeit,Timer,FPS
 parser = argparse.ArgumentParser()
 parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
 # parser.add_argument('--stream', default="http://191.167.15.101:8079",
-                    help="Video stram URI, path to video or webcam number based on which the network is visualized")
+                    help="Video stram URI, webcam number or path to a video based on which the network is visualized")
 # parser.add_argument('--show', default=True,
 #                     help="Show output window")
 parser.add_argument('--network', default="VGG16",
-                    help="Network to visualise (VGG16,ResNet50 ...)")
+                    help="Network to visualise: One of built in keras applications (VGG16,ResNet50 ...) or path to .h5 file")
 args = parser.parse_args()
 
 
@@ -36,8 +36,7 @@ sess.as_default()
 tf.keras.backend.set_session(sess)
 
 nn, ph = get_network(args.network)
-# from getyolo import get_yolo
-# nn, ph = get_yolo()
+
 print(nn.summary())
 
 # conv_outputs = get_outputs_from_graph(type='Conv2D')
