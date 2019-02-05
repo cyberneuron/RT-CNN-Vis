@@ -6,7 +6,7 @@ import tensorflow as tf
 import cv2
 import numpy as np
 
-from networks import getNetwork
+from networks import get_network
 from utils import getConvOutput
 
 def gradCam(y,A, reduce_max=True):
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     sess = tf.Session()
     tf.keras.backend.set_session(sess)
-    nn,ph = getNetwork(name=args.network,gradients="Standard")
+    nn,ph = get_network(name=args.network,gradients="Standard")
     nn.summary()
     from  tensorflow.keras.applications.resnet50 import decode_predictions
     preSoftMax = nn.output.op.inputs[0]

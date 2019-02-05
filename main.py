@@ -13,7 +13,7 @@ import numpy as np
 from streamReader import StreamReader
 from gradcam import gradCam, gradCamToHeatMap
 from guidedBackprop import registerConvBackprops, register_fc_backprops
-from networks import getNetwork
+from networks import get_network
 from maps import mapsToGrid
 from utils import get_outputs_from_graph, get_outputs_from_model, getConvOutput
 from timed import timeit,Timer
@@ -33,37 +33,38 @@ args = parser.parse_args()
 graph = tf.get_default_graph()
 sess = tf.Session()
 sess.as_default()
-sess.run
 tf.keras.backend.set_session(sess)
-network_name = args.network
-# network_name = "MobileNet"
 
-nn, ph = getNetwork(network_name)
+nn, ph = get_network(args.network)
 # from getyolo import get_yolo
 # nn, ph = get_yolo()
 print(nn.summary())
 
-# convOutputs = get_outputs_from_graph(type='Conv2D')
-convOutputs = get_outputs_from_model(nn,layer_type='Conv2D')
-convOutputs
-
-
-convGrids = OrderedDict( (name, mapsToGrid(output[0])) for name, output in convOutputs.items())
+# conv_outputs = get_outputs_from_graph(type='Conv2D')
+conv_outputs = get_outputs_from_model(nn,layer_type='Conv2D')
+assert conv_outputs, "Provided network has no Convolutional layers, hence I have no idea what to visualize"
 
 
 
-convBackprops = registerConvBackprops(convOutputs,nn.input)
+conv_grids = OrderedDict( (name, mapsToGrid(output[0])) for name, output in conv_outputs.items())
+
+
+
+convBackprops = registerConvBackprops(conv_outputs,nn.input)
 
 fc_outputs = get_outputs_from_model(nn,layer_type="Dense")
 fc_backprops = register_fc_backprops(fc_outputs,nn.input)
 
+
+
 sess.run(tf.variables_initializer([convBackprops[name][1] for name in convBackprops ]))
 sess.run(tf.variables_initializer([fc_backprops[name].selection for name in fc_backprops ]))
 
-gradCamA = getConvOutput(nn,-1)
-gradCamA
-softmaxin = nn.output.op.inputs[0]
-camT = gradCam(softmaxin,gradCamA)
+if fc_outputs:
+    # GradCam is possible if there are fully connected layers
+    gradCamA = getConvOutput(nn,-1)
+    softmaxin = nn.output.op.inputs[0]
+    camT = gradCam(softmaxin,gradCamA)
 
 # TODO: make qt part work in thread
 # TODO: fix this, (bad fast way to exit from programm)
@@ -90,7 +91,7 @@ def assignWhenChanged(var,value):
 
 async def main(ui=None, options={}):
     assert ui
-    ui.fillLayers(convGrids.keys(), fc_outputs.keys())
+    ui.fillLayers(conv_grids.keys(), fc_outputs.keys())
 
     with StreamReader(args.stream) as cap:
 
@@ -101,7 +102,7 @@ async def main(ui=None, options={}):
             else:
                 old_frame = frame
             currentGridName = ui.currentConv
-            currentDense = ui.currentDense
+
             timer = Timer("processing",silent=True)
             ui.loadRealImage(frame)
             timer.tick("image loaded")
@@ -112,46 +113,58 @@ async def main(ui=None, options={}):
             frameToShow = frame.copy()
             frame = np.array([frame])
             timer.tick("frame prepared")
-            gridTensor,(columns,rows), mapStack= convGrids[currentGridName]
+            gridTensor,(columns,rows), mapStack= conv_grids[currentGridName]
             neuronBackpropT,map_neuron_selection_T = convBackprops[currentGridName]
             timer.tick("setting graph vars")
             if map_raw_idx < len(mapStack):
                 assignWhenChanged(map_neuron_selection_T, map_raw_idx)
-            assignWhenChanged(fc_backprops[currentDense].selection, dense_raw_idx)
+
             timer.tick("running main session")
             fetches = {
                 "grid": gridTensor,
                 "map": mapStack[map_raw_idx],
-                "cam": camT,
+                # "cam": camT,
                 "neuronBackprop": neuronBackpropT,
-                "fc_out": fc_outputs[currentDense]
+                # "dense": fc_outputs[currentDense]
             }
+            # if the network has fully connected layers their inspection
+            # as well as GradCam algorithm is possible
+            if fc_outputs:
+                currentDense = ui.currentDense
+                fetches.update({
+                    "dense":  fc_outputs[currentDense],
+                    "cam": camT
+                    })
+
+            if "dense" in fetches:
+                assignWhenChanged(fc_backprops[currentDense].selection, dense_raw_idx)
+
             fetched = sess.run(fetches,
                                 feed_dict={ph:frame})
             timer.tick("Session passed")
-            # aGrid, certainMap, cam, neuronBackprop, denseActs = sess_run
-            heatmap, coloredMap = gradCamToHeatMap(fetched["cam"],frameToShow)
-            activationMap, cell_numbers = values2Map(fetched["fc_out"][0])
-            timer.tick("gradcami generated")
-            cv2.imshow("gradCam",coloredMap)
+            if "cam" in fetched:
+                heatmap, coloredMap = gradCamToHeatMap(fetched["cam"],frameToShow)
+                cv2.imshow("gradCam",coloredMap)
+            if "dense" in fetched:
+                activationMap, cell_numbers = values2Map(fetched["dense"][0])
+                ui.loadActivationMap(activationMap)
+                ui.loadActivationScrollMap(activationMap, cell_numbers)
+                if dense_raw_idx < cell_numbers:
+                    ui.setDenseValue(fetched["dense"][0][dense_raw_idx])
+            if "grid" in fetched:
+                ui.loadMap(rescale_img(fetched["grid"]), (rows,columns))
+            if "map" in fetched:
+                ui.loadCell(rescale_img(fetched["map"]))
             cv2.imshow("neuron-backprop",fetched["neuronBackprop"][0])
 
             print(framenum)
             # cv2.imshow("neuron-backprop-fc",fc_backprop[0])
-            timer.tick("cv2 imshow called")
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-            timer.tick("key waited")
-            ui.loadActivationMap(activationMap)
-            ui.loadActivationScrollMap(activationMap, cell_numbers)
+
             # TODO: add check for number of cells here
-            ui.loadCell(rescale_img(fetched["map"]))
-            ui.loadMap(rescale_img(fetched["grid"]), (rows,columns))
-            if dense_raw_idx < cell_numbers:
-                ui.setDenseValue(fetched["fc_out"][0][dense_raw_idx])
 
             QApplication.processEvents()
-            timer.tick("event processed")
 
             if close_main_loop[0]:
                 break
