@@ -16,7 +16,7 @@ from guidedBackprop import registerConvBackprops, register_fc_backprops
 from networks import get_network
 from maps import mapsToGrid
 from utils import get_outputs_from_graph, get_outputs_from_model, getConvOutput
-from timed import timeit,Timer
+from timed import timeit,Timer,FPS
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--stream', default="http://192.168.16.101:8081/video",
@@ -94,7 +94,7 @@ async def main(ui=None, options={}):
     ui.fillLayers(conv_grids.keys(), fc_outputs.keys())
 
     with StreamReader(args.stream) as cap:
-
+        fps = FPS()
         for frame,framenum in zip(cap.read(),itertools.count()):
 
             if ui.paused:
@@ -157,7 +157,7 @@ async def main(ui=None, options={}):
                 ui.loadCell(rescale_img(fetched["map"]))
             cv2.imshow("neuron-backprop",fetched["neuronBackprop"][0])
 
-            print(framenum)
+            print(f"Frame Number:{framenum:5d}, FPS:{fps():2.1f}", end="\r")
             # cv2.imshow("neuron-backprop-fc",fc_backprop[0])
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
